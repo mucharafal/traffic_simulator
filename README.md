@@ -1,1 +1,3 @@
-# trafifc_simulator
+# traffic_simulator
+todo
+interfejsy do komunikacji między aktorami
