@@ -1,8 +1,18 @@
 package com.simulator
 
-import akka.actor.{Props}
+import javax.sql.RowSetMetaData
 
 object Junction {
-  def props(): Props = Props(Road)
-  final case class RideTo(carId: Int, roadFromId: Int, roadToId: Int)
+  def props(): Props = Props(Junction)
+  final case class JunctionGetInformationRequest(From: Int)
+  final case class JunctionGetInformationResult(From: Int, informationPackage)
+}
+
+class Junction(val JunctionId: Int, var RoadsList: List[Road]) {
+
+  def addRoad(newRoad: Road): Unit = {
+    RoadsList = RoadsList ++ List(newRoad)
+  }
+
+
 }
