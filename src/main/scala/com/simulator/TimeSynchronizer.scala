@@ -15,8 +15,8 @@ class TimeSynchronizer(var objectsList: LinkedList[ActorRef]) extends Actor{
   import TimeSynchronizer._
   var receivedMessagesCounter: Int = 0
   def receive = {
-    case Computed(_) => {
-      if (objectsList.size != 0) {
+    case Computed(clientRef) => {
+      if (objectsList.size != 0 && objectsList.exists(x => x == clientRef)) {
         receivedMessagesCounter = receivedMessagesCounter + 1
         if (receivedMessagesCounter == objectsList.size) {
           receivedMessagesCounter = 0
