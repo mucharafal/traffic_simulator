@@ -1,34 +1,37 @@
 package com.simulator
 
-import akka.actor.{Props, ActorRef, Actor}
-import scala.collection.mutable.LinkedList
+import akka.actor.{Actor, ActorRef, Props}
+
+import scala.collection.immutable.Seq
 
 object TimeSynchronizer {
-  def props(): Props = Props(new TimeSynchronizer(new LinkedList[ActorRef]()))
-  final case class ComputeTimeSlot(n: Int)  //computation in time slot ended
-  final case class AddObject(Id: ActorRef)
-  final case class RemoveObject(Id: ActorRef)
+  def props(): Props = Props(new TimeSynchronizer(Seq.empty))
+
+  final case class ComputeTimeSlot(n: Int) //computation in time slot ended
+  final case class AddObject(id: ActorRef)
+  final case class RemoveObject(id: ActorRef)
   case object Computed
 }
 
-class TimeSynchronizer(var objectsList: LinkedList[ActorRef]) extends Actor{
+class TimeSynchronizer(var objects: Seq[ActorRef]) extends Actor {
   import TimeSynchronizer._
-  var sendedMessagesCounter = 0
-  var receivedMessagesCounter: Int = 0
+
+  var sentMessagesCounter = 0
+  var receivedMessagesCounter = 0
+
   def receive = {
-    case Computed => {
+    case Computed =>
       val clientRef = sender()
-      if (objectsList.size != 0 && objectsList.exists(x => x == clientRef)) {
-        receivedMessagesCounter = receivedMessagesCounter + 1
-        if (receivedMessagesCounter == objectsList.size) {
+      if (objects.nonEmpty && objects.contains(clientRef)) {
+        receivedMessagesCounter += 1
+        if (receivedMessagesCounter == objects.size) {
           receivedMessagesCounter = 0
-          objectsList.foreach((x: ActorRef) => x ! ComputeTimeSlot(sendedMessagesCounter))
-          sendedMessagesCounter += 1
-          sendedMessagesCounter %= 1000000
+          objects.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
+          sentMessagesCounter += 1
+          sentMessagesCounter %= 1000000
         }
       }
-    }
-    case AddObject(id) => objectsList = objectsList ++ List(id)
-    case RemoveObject(id) => objectsList = objectsList.filter((x: ActorRef) => x != id)
+    case AddObject(id) => objects :+= id
+    case RemoveObject(id) => objects = objects.filter(_ != id)
   }
 }
