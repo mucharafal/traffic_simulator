@@ -7,8 +7,8 @@ import akka.actor.{Props, ActorRef, Actor}
 
 object Junction {
   def props(junction: Junction): Props = Props(junction)
-  final case class JunctionGetInformationRequest(From: ActorRef)
-  final case class JunctionGetInformationResult(From: ActorRef, informationPackage: Any)
+  final case class JunctionGetInformationRequest()
+  final case class JunctionGetInformationResult(informationPackage: Any)
 }
 
 object JuctionTypes extends Enumeration {
@@ -26,8 +26,8 @@ class RightHandJunction(val JunctionId: ActorRef, var RoadsList: List[(ActorRef,
   import TimeSynchronizer._
 
   def receive = {
-    case JunctionGetInformationRequest(from) =>
-      from ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
+    case JunctionGetInformationRequest() =>
+      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
     case ComputeTimeSlot =>
       2+2     //do nothing
   }
@@ -41,8 +41,8 @@ class SignJunction(val JunctionId: ActorRef, var RoadsList: List[(Road, Boolean)
   import TimeSynchronizer._
 
   def receive = {
-    case JunctionGetInformationRequest(from) =>
-      from ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
+    case JunctionGetInformationRequest() =>
+      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
     case ComputeTimeSlot => 2
   }
 
