@@ -16,30 +16,29 @@ class RoadTest(_system: ActorSystem) extends TestKit(_system)
     shutdown(system)
   }
 
-  // TODO
-//  "A Road" should {
-//    "return null, when has no car on" in {
-//      val mock = TestProbe()
-//      val road = system.actorOf(Road.props(mock.ref, mock.ref, mock.ref))
-//
-//      mock.send(road, GetCarIdNthCar(1))
-//      mock.expectMsg(500 millis, NoCar)
-//      mock.send(road, GetCarIdNthCar(2))
-//      mock.expectMsg(500 millis, NoCar)
-//      mock.send(road, GetCarIdNthCar(100))
-//      mock.expectMsg(500 millis, NoCar)
-//    }
-//    "return proper ref, when it is car on" in {
-//      val mock = TestProbe()
-//      val road = system.actorOf(Road.props(mock.ref, mock.ref, mock.ref))
-//
-//      mock.send(road, AddCar(mock.ref, 1.0))
-//      mock.send(road, GetCarIdNthCar(1))
-//      mock.expectMsg(500 millis, CarRef(mock.ref))
-//
-//      mock.send(road, GetCarIdNthCar(2))
-//      mock.expectMsg(500 millis, NoCar)
-//    }
-//  }
+  "A Road" should {
+    "return null, when has no car on" in {
+      val mock = TestProbe()
+      val road = system.actorOf(Road.props(mock.ref, mock.ref, 5.0))
+
+      mock.send(road, GetNthCar(1))
+      mock.expectMsg(500 millis, NthCar(None))
+      mock.send(road, GetNthCar(2))
+      mock.expectMsg(500 millis, NthCar(None))
+      mock.send(road, GetNthCar(100))
+      mock.expectMsg(500 millis, NthCar(None))
+    }
+    "return proper ref, when it is car on" in {
+      val mock = TestProbe()
+      val road = system.actorOf(Road.props(mock.ref, mock.ref, 5.0))
+
+      mock.send(road, AddCar(mock.ref, 1.0))
+      mock.send(road, GetNthCar(1))
+      mock.expectMsg(500 millis, NthCar(Some(mock.ref)))
+
+      mock.send(road, GetNthCar(2))
+      mock.expectMsg(500 millis, NthCar(None))
+    }
+  }
 
 }

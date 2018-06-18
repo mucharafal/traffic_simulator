@@ -38,7 +38,7 @@ class Car(currentPosition:(ActorRef, Double),
   var crashedCounter: Int = 10
   var started: Boolean = false
   roadId ! GetLength
-  roadId ! GetJunction
+  roadId ! GetEndJunction
 
 
   def receive = {
@@ -55,7 +55,7 @@ class Car(currentPosition:(ActorRef, Double),
             roadId ! RemoveCar(self)
             roadId = roadToTurnOn
             roadId ! GetLength
-            roadId ! GetJunction
+            roadId ! GetEndJunction
           } else {
             if (roadId == destinationRoadId &&
               newPosition > destinationPositionX) {
@@ -91,7 +91,7 @@ class Car(currentPosition:(ActorRef, Double),
       if(sender() == roadId){
         currentRoadLength = length
       }
-    case GetJunctionResult(junctionId) =>
+    case GetEndJunctionResult(junctionId) =>
       if(sender() == roadId){
         nextJunction = junctionId
       }
