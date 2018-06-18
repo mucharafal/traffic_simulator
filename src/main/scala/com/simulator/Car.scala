@@ -4,24 +4,99 @@ import akka.actor.{Props, Actor, ActorRef}
 import Road._
 
 object Car {
-  def props(car: Car): Props = Props(car)
+  def props(currentPosition:(ActorRef, Double),
+            destinationPosition:(ActorRef, Double),
+            driveAlgorithm: Any): Props =
+    Props(new Car(currentPosition, destinationPosition, driveAlgorithm))
 
-  final case class GetInformationRequest()  //Get information about position, velocity, breaking signal
+  case object CarGetInformationRequest  //Get information about position, velocity, breaking signal
                                               // and number of timeslot
-  final case class GetInformationResult(roadId: ActorRef, position_x: Double, velocity: Double)
+  final case class CarGetInformationResult(roadId: ActorRef,
+                                           position_x: Double,
+                                           velocity: Double,
+                                           breaking: Boolean)
+  case object Crash
 }
 
-class Car(val supervisorId: ActorRef,
-          currentPosition:(ActorRef, Double),
+class Car(currentPosition:(ActorRef, Double),
           destinationPosition:(ActorRef, Double),
-          var velocity: Double, var breaking: Boolean, val driveAlgorithm: Any) extends Actor {
+          val driveAlgorithm: Any) extends Actor {
 
   import Car._
   var (roadId, positionX) = currentPosition
   val (destinationRoadId, destinationPositionX) = destinationPosition
+  //what to do in time slot
+  var roadToTurnOn: ActorRef = null
+  var nextJunction: ActorRef = null
+  var acceleration: Double = 0
+  var velocity: Double = 0
+  var breaking: Boolean = false
+  var synchronizer: Int = -1
+  var currentRoadLength: Double = 1000000
+  var crashed: Boolean = false
+  var crashedCounter: Int = 10
+  var started: Boolean = false
+  roadId ! GetLength
+  roadId ! GetJunction
+
 
   def receive = {
-    case GetInformationRequest() =>
-      sender() ! GetInformationResult(roadId, positionX, velocity)
+    case CarGetInformationRequest =>
+      sender() ! CarGetInformationResult(roadId, positionX, velocity, breaking)
+    case ComputeTimeSlot(s) => {
+      if(!crashed) {
+        if(!started) {
+          var newPosition = positionX + velocity + acceleration / 2
+          if (newPosition - currentRoadLength > 0) {
+            nextJunction ! Turning(roadId, roadToTurnOn)
+            positionX = newPosition - currentRoadLength
+            roadToTurnOn ! AddCar(self, positionX)
+            roadId ! RemoveCar(self)
+            roadId = roadToTurnOn
+            roadId ! GetLength
+            roadId ! GetJunction
+          } else {
+            if (roadId == destinationRoadId &&
+              newPosition > destinationPositionX) {
+              roadId ! RemoveCar(self)
+              context stop self
+            }
+
+            roadId ! Movement(positionX, newPosition)
+            positionX = newPosition
+          }
+          velocity += acceleration / 2
+          driveAlgorithm(roadId,
+            nextJunction,
+            positionX,
+            velocity) match {
+            case (newRoad: ActorRef, newAcc: Double) =>
+              roadToTurnOn = newRoad
+              acceleration = newAcc
+            case _ => 2
+          }
+        } else {
+          //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
+        }
+      } else {
+        crashedCounter -= 1
+        if(crashedCounter == 0){
+          roadId ! RemoveCar(self)
+          context stop self
+        }
+      }
+    }
+    case GetLengthResult(length) =>
+      if(sender() == roadId){
+        currentRoadLength = length
+      }
+    case GetJunctionResult(junctionId) =>
+      if(sender() == roadId){
+        nextJunction = junctionId
+      }
+    case Crash => {
+      crashed = true
+      velocity = 0
+    }
   }
 }
