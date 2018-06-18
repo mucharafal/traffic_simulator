@@ -40,13 +40,11 @@ class RoadGenerator {
   }
 
   private def generateCars(roads: IndexedSeq[Road], carCount: Int): Seq[Car] = {
-    def interpolateRoad(road: Road, alpha: Float) =
-      road.start.position.interpolate(road.end.position)(alpha)
+
 
     Seq.fill(carCount) { roads(r.nextInt(roads.size)) }
-      .map { interpolateRoad(_, r.nextFloat()) }
       .zipWithIndex
-      .map { case (position, id) => Car(id, position) }
+      .map { case (road, id) => Car(id, road, r.nextFloat()) }
   }
 
   private def positionToVector2d(p: Position): Vector2D = new Vector2D(p.x, p.y)
