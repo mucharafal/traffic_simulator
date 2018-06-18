@@ -1,9 +1,9 @@
 # traffic_simulator
 todo
 
--implementacja zachowań "warstwy fizycznej" - Car i Junction
+- połatać w sumie wszystkie klasy
 
--testy - Car i Junction
+- testy - Car + dla nowych funkcji
 
 quickstart:
 Pobrać ze strony akki zestaw do szybkiego uruchomienia i scalić folder z repozytorium z pobranym zestawem
