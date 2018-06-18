@@ -86,7 +86,7 @@ class TimeSynchronizerTest(_system: ActorSystem)
         }
         for(client <- clientsProbe){
           if(client == clientsProbe(ignoredIndex)){
-            client.expectNoMessage(10 millis)
+            client.expectNoMessage(100 millis)
           } else {
             client.expectMsg(10 millis, ComputeTimeSlot(i+9))
           }
