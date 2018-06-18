@@ -29,7 +29,6 @@ object Junction {
 
 abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
   def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = {
-    print("Adding road\n")
     val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
     RoadsList = RoadsList ++ List(Tuple2(roadId, begin))
   }
@@ -54,7 +53,7 @@ class RightHandJunction() extends Junction {
 
 }
 object SignJunction {
-  final case class priviledgeRoad(road: ActorRef)
+  final case class PriviledgeRoad(road: ActorRef)
 }
 class SignJunction() extends Junction {
   import JunctionTypes._
@@ -72,7 +71,7 @@ class SignJunction() extends Junction {
       sender() ! Computed
     case AddRoad(id, map) =>
       super.addRoad(id, map)
-    case priviledgeRoad(ref) =>
+    case PriviledgeRoad(ref) =>
       privilegedRoads = privilegedRoads match {
         case (null, null) =>
           Tuple2(ref, null)
@@ -102,7 +101,8 @@ class SignalizationJunction(val GreenLightTime: Int = 10) extends Junction {
       TimeToChange match {
         case 0 =>
           TimeToChange = GreenLightTime
-          GreenLightRoadRef = RoadsList.filter(_._2 == false)(roadIterator)._1
+          if(RoadsList.exists(_._2 == false))
+            GreenLightRoadRef = RoadsList.filter(_._2 == false)(roadIterator)._1
           roadIterator = (roadIterator + 1) % RoadsList.size
         case _ =>
           TimeToChange -= 1
