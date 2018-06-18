@@ -5,46 +5,111 @@ import javax.sql.RowSetMetaData
 import scala.runtime.Nothing$
 import akka.actor.{Props, ActorRef, Actor}
 
-object Junction {
-  def props(junction: Junction): Props = Props(junction)
-  final case class JunctionGetInformationRequest()
-  final case class JunctionGetInformationResult(informationPackage: Any)
-}
-
-object JuctionTypes extends Enumeration {
+object JunctionTypes extends Enumeration {
   type JunctionTypes = Value
   val rightHandJunction, signJunction, signalizationJunction = Value
 }
 
-abstract class Junction() extends Actor {
-  def addRoad(roadId: ActorRef, roadInformation: Any)
+object Junction {
+  import JunctionTypes._
+  def props(junctionType: JunctionTypes): Props = {
+    junctionType match {
+      case JunctionTypes.rightHandJunction =>
+        Props(new RightHandJunction())
+      case JunctionTypes.signJunction =>
+        Props(new SignJunction())
+      case JunctionTypes.signalizationJunction =>
+        Props(new SignalizationJunction())
+    }
+  }
+  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any)
+  final case class AddRoad(id: ActorRef, roadInformation: Map[String, Any])
+  case object JunctionGetInformationRequest
 }
 
-class RightHandJunction(val JunctionId: ActorRef, var RoadsList: List[(ActorRef, Boolean)]) extends Junction {
-  import JuctionTypes._
+abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
+  def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = {
+    val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
+    RoadsList = RoadsList ++ List(Tuple2(roadId, begin))
+  }
+}
+
+class RightHandJunction() extends Junction {
+  import JunctionTypes._
   import Junction._
   import TimeSynchronizer._
 
+  var synchronizer: Int = -1
   def receive = {
-    case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
-    case ComputeTimeSlot =>
-      2+2     //do nothing
+    case JunctionGetInformationRequest =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple2(rightHandJunction, RoadsList))
+    case ComputeTimeSlot(s) =>
+      synchronizer = s
+      sender() ! Computed
+    case AddRoad(id, map) =>
+      super.addRoad(id, map)
   }
 
-  def addRoad(roadId: ActorRef, roadInformation: Any) = {2}
+
+}
+object SignJunction {
+  final case class PriviledgeRoad(road: ActorRef)
+}
+class SignJunction() extends Junction {
+  import JunctionTypes._
+  import Junction._
+  import TimeSynchronizer._
+  import SignJunction._
+
+  var synchronizer: Int = -1
+  var privilegedRoads: (ActorRef, ActorRef) = Tuple2(null, null)
+  def receive = {
+    case JunctionGetInformationRequest =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple3(signJunction, RoadsList, privilegedRoads))
+    case ComputeTimeSlot(s) =>
+      synchronizer = s
+      sender() ! Computed
+    case AddRoad(id, map) =>
+      super.addRoad(id, map)
+    case PriviledgeRoad(ref) =>
+      privilegedRoads = privilegedRoads match {
+        case (null, null) =>
+          Tuple2(ref, null)
+        case (sth, null) =>
+          Tuple2(sth, ref)
+        case (sth, sth2) =>
+          privilegedRoads
+      }
+  }
 }
 
-class SignJunction(val JunctionId: ActorRef, var RoadsList: List[(Road, Boolean)]) extends Junction {
-  import JuctionTypes._
+class SignalizationJunction(val GreenLightTime: Int = 10) extends Junction {
+  import JunctionTypes._
   import Junction._
   import TimeSynchronizer._
 
-  def receive = {
-    case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
-    case ComputeTimeSlot => 2
-  }
+  var GreenLightRoadRef: ActorRef = null
+  var TimeToChange: Int = GreenLightTime
+  var synchronizer: Int = -1
+  var roadIterator: Int = 0
 
-  def addRoad(roadId: ActorRef, roadInformation: Any) = {2}
+
+  def receive = {
+    case JunctionGetInformationRequest =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple4(signalizationJunction, RoadsList, GreenLightRoadRef, TimeToChange))
+    case ComputeTimeSlot(s) =>
+      TimeToChange match {
+        case 0 =>
+          TimeToChange = GreenLightTime
+          if(RoadsList.exists(_._2 == false))
+            GreenLightRoadRef = RoadsList.filter(_._2 == false)(roadIterator)._1
+          roadIterator = (roadIterator + 1) % RoadsList.size
+        case _ =>
+          TimeToChange -= 1
+      }
+      synchronizer = s
+      sender() ! Computed
+    case AddRoad(id, map) =>
+      super.addRoad(id, map)
+  }
 }
