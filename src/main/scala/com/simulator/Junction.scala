@@ -16,35 +16,47 @@ object JuctionTypes extends Enumeration {
   val rightHandJunction, signJunction, signalizationJunction = Value
 }
 
-abstract class Junction() extends Actor {
-  def addRoad(roadId: ActorRef, roadInformation: Any)
+abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
+  def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = {
+    val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
+    RoadsList = RoadsList ++ List(Tuple2(roadId, begin))
+  }
 }
 
-class RightHandJunction(val JunctionId: ActorRef, var RoadsList: List[(ActorRef, Boolean)]) extends Junction {
+class RightHandJunction() extends Junction {
   import JuctionTypes._
   import Junction._
   import TimeSynchronizer._
 
   def receive = {
     case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
+      sender() ! JunctionGetInformationResult(Tuple2(rightHandJunction, RoadsList))
     case ComputeTimeSlot =>
-      2+2     //do nothing
+      sender() ! Computed
   }
 
-  def addRoad(roadId: ActorRef, roadInformation: Any) = {2}
+
 }
 
-class SignJunction(val JunctionId: ActorRef, var RoadsList: List[(Road, Boolean)]) extends Junction {
+class SignJunction() extends Junction {
   import JuctionTypes._
   import Junction._
   import TimeSynchronizer._
 
   def receive = {
     case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(JunctionId, Tuple2(rightHandJunction, RoadsList))
-    case ComputeTimeSlot => 2
+      sender() ! JunctionGetInformationResult(Tuple2(signJunction, RoadsList))
+    case ComputeTimeSlot =>
+      sender() ! Computed
   }
+}
 
-  def addRoad(roadId: ActorRef, roadInformation: Any) = {2}
+class signalizationJunction() extends Junction {
+  import JuctionTypes._
+  import Junction._
+  import TimeSynchronizer._
+
+  def receive = {
+
+  }
 }
