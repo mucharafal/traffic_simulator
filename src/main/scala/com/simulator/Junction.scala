@@ -8,7 +8,7 @@ import akka.actor.{Props, ActorRef, Actor}
 object Junction {
   def props(junction: Junction): Props = Props(junction)
   final case class JunctionGetInformationRequest()
-  final case class JunctionGetInformationResult(informationPackage: Any)
+  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any)
 }
 
 object JuctionTypes extends Enumeration {
@@ -28,10 +28,12 @@ class RightHandJunction() extends Junction {
   import Junction._
   import TimeSynchronizer._
 
+  var synchronizer: Int = -1
   def receive = {
     case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(Tuple2(rightHandJunction, RoadsList))
-    case ComputeTimeSlot =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple2(rightHandJunction, RoadsList))
+    case ComputeTimeSlot(s) =>
+      synchronizer = s
       sender() ! Computed
   }
 
@@ -43,20 +45,41 @@ class SignJunction() extends Junction {
   import Junction._
   import TimeSynchronizer._
 
+  var synchronizer: Int = -1
   def receive = {
     case JunctionGetInformationRequest() =>
-      sender() ! JunctionGetInformationResult(Tuple2(signJunction, RoadsList))
-    case ComputeTimeSlot =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple2(signJunction, RoadsList))
+    case ComputeTimeSlot(s) =>
+      synchronizer = s
       sender() ! Computed
   }
 }
 
-class signalizationJunction() extends Junction {
+class signalizationJunction(val GreenLightTime: Int) extends Junction {
   import JuctionTypes._
   import Junction._
   import TimeSynchronizer._
 
-  def receive = {
+  var GreenLightRoadRef: ActorRef = null
+  var TimeToChange: Int = GreenLightTime
+  var synchronizer: Int = -1
+  var roadIterator: Int = 0
 
+
+  def receive = {
+    case JunctionGetInformationRequest() =>
+      sender() ! JunctionGetInformationResult(synchronizer, Tuple4(signalizationJunction, RoadsList, GreenLightRoadRef, TimeToChange))
+    case ComputeTimeSlot(s) =>
+      TimeToChange match {
+        case 0 =>
+          TimeToChange = GreenLightTime
+          GreenLightRoadRef = RoadsList.filter(_._2)(roadIterator)._1
+          roadIterator = (roadIterator + 1) % RoadsList.size
+        case _ =>
+          TimeToChange -= 1
+      }
+      synchronizer = s
+      sender() ! Computed
   }
+
 }

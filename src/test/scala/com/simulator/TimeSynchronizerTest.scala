@@ -25,8 +25,8 @@ class TimeSynchronizerTest(_system: ActorSystem)
       val timeSynchronizer = system.actorOf(TimeSynchronizer.props())
 
       timeSynchronizer ! AddObject(clientProbe.ref)
-      timeSynchronizer ! Computed(clientProbe.ref)
-      clientProbe.expectMsg(500 millis, ComputeTimeSlot)
+      clientProbe.send(timeSynchronizer, Computed)
+      clientProbe.expectMsg(500 millis, ComputeTimeSlot(0))
     }
     "send signals, when receive complete signal from client (1 client version)" in {
       val clientProbe = TestProbe()
@@ -35,8 +35,8 @@ class TimeSynchronizerTest(_system: ActorSystem)
       timeSynchronizer ! AddObject(clientProbe.ref)
 
       for(i <- 1 to 10){
-        timeSynchronizer ! Computed(clientProbe.ref)
-        clientProbe.expectMsg(500 millis, ComputeTimeSlot)
+        clientProbe.send(timeSynchronizer, Computed)
+        clientProbe.expectMsg(500 millis, ComputeTimeSlot(i-1))
       }
     }
     "send signals, when receive complete signal from all clients (client registered 10 times)" in {
@@ -47,13 +47,13 @@ class TimeSynchronizerTest(_system: ActorSystem)
         timeSynchronizer ! AddObject(clientProbe.ref)
       }
 
-      for(i <- 1 to 10){
+      for(i1 <- 1 to 10){
         for(i <- 1 to 10) {
-          timeSynchronizer ! Computed(clientProbe.ref)
+          clientProbe.send(timeSynchronizer, Computed)
         }
 
         for(i <- 1 to 10) {
-          clientProbe.expectMsg(500 millis, ComputeTimeSlot)
+          clientProbe.expectMsg(500 millis, ComputeTimeSlot(i1-1))
         }
       }
     }
@@ -67,10 +67,10 @@ class TimeSynchronizerTest(_system: ActorSystem)
 
       for(i <- 1 to 10) {
         for (client <- clientsProbe) {
-          timeSynchronizer ! Computed(client.ref)
+          client.send(timeSynchronizer, Computed)
         }
         for(client <- clientsProbe){
-          client.expectMsg(500 millis, ComputeTimeSlot)
+          client.expectMsg(500 millis, ComputeTimeSlot(i-1))
         }
       }
 
@@ -82,13 +82,13 @@ class TimeSynchronizerTest(_system: ActorSystem)
           for(client1 <- clientsProbe){
             client1.expectNoMessage(10 millis)
           }
-          timeSynchronizer ! Computed(client.ref)
+          client.send(timeSynchronizer, Computed)
         }
         for(client <- clientsProbe){
           if(client == clientsProbe(ignoredIndex)){
             client.expectNoMessage(10 millis)
           } else {
-            client.expectMsg(10 millis, ComputeTimeSlot)
+            client.expectMsg(10 millis, ComputeTimeSlot(i+9))
           }
         }
       }
