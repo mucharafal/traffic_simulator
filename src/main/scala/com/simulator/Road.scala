@@ -23,11 +23,11 @@ class Road(val supervisorId: ActorRef,
            val junctionToId: ActorRef,
            val length: Double) extends Actor {
   import Road._
-  var CarsList = List[ActorRef, Double, Int]()
+  var CarsList = List.empty[ActorRef]
   var synchronization: Int = -1
   def receive = {
     case GetCarIdNthCar(n) => {
-      CarsList.get(n-1) match {
+      CarsList.lift(n-1) match {
         case None =>
           sender() ! NoCar
         case Some(ref) =>
@@ -42,23 +42,23 @@ class Road(val supervisorId: ActorRef,
       sender() ! GetJunctionResult(junctionToId)
     case GetLength =>
       sender() ! GetLengthResult(length)
-    case Movement(from, to) =>
-      val index = CarsList.indexOf(sender())
-      val collision = CarsList.size match {
-        _ if index == 0 => false
-        _ => {
-        nextCarPosition = CarsList(index-1)._2
-        if(nextCarPosition)//jesli nie kolidują to spoko, ale wpp
-        /*
-        1. gość wychodzi
-        2. gość przesuwa się
-        lista tych, którzy dokonali ruchu?
-
-        Podział na listy: osobno auta(najpierw)
-        Potem junction i roads
-
-         */
-      }
-      }
+    case Movement(from, to) => ??? // TODO
+//      val index = CarsList.indexOf(sender())
+//      val collision = CarsList.size match {
+//        _ if index == 0 => false
+//        _ => {
+//        nextCarPosition = CarsList(index-1)._2
+//        if(nextCarPosition)//jesli nie kolidują to spoko, ale wpp
+//        /*
+//        1. gość wychodzi
+//        2. gość przesuwa się
+//        lista tych, którzy dokonali ruchu?
+//
+//        Podział na listy: osobno auta(najpierw)
+//        Potem junction i roads
+//
+//         */
+//      }
+//      }
   }
 }

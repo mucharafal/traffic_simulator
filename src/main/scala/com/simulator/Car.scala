@@ -1,7 +1,8 @@
 package com.simulator
 
-import akka.actor.{Props, Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, Props}
 import Road._
+import com.simulator.TimeSynchronizer.ComputeTimeSlot
 
 object Car {
   def props(currentPosition:(ActorRef, Double),
@@ -48,7 +49,7 @@ class Car(currentPosition:(ActorRef, Double),
         if(!started) {
           var newPosition = positionX + velocity + acceleration / 2
           if (newPosition - currentRoadLength > 0) {
-            nextJunction ! Turning(roadId, roadToTurnOn)
+            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
             positionX = newPosition - currentRoadLength
             roadToTurnOn ! AddCar(self, positionX)
             roadId ! RemoveCar(self)
@@ -66,15 +67,15 @@ class Car(currentPosition:(ActorRef, Double),
             positionX = newPosition
           }
           velocity += acceleration / 2
-          driveAlgorithm(roadId,
-            nextJunction,
-            positionX,
-            velocity) match {
-            case (newRoad: ActorRef, newAcc: Double) =>
-              roadToTurnOn = newRoad
-              acceleration = newAcc
-            case _ => 2
-          }
+//          driveAlgorithm(roadId,
+//            nextJunction,
+//            positionX,
+//            velocity) match {
+//            case (newRoad: ActorRef, newAcc: Double) =>
+//              roadToTurnOn = newRoad
+//              acceleration = newAcc
+//            case _ => 2
+//          } // TODO
         } else {
           //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
         }
