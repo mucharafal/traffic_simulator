@@ -29,8 +29,8 @@ class Road(val startJunction: ActorRef,
   def receive = {
     case GetNthCar(n) =>
       sender() ! NthCar(cars.lift(n - 1))
-    case AddCar(ref, pos) =>
-      cars ++= List(ref)
+    case AddCar(ref, pos) => // TODO: pos
+      cars :+= ref
     case RemoveCar(ref) =>
       cars = cars.filter(_ != ref)
     case GetEndJunction =>

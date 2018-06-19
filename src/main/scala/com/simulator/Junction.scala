@@ -24,10 +24,10 @@ object Junction {
   case object JunctionGetInformationRequest
 }
 
-abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
+abstract class Junction(var roads: List[(ActorRef, Boolean)] = List.empty) extends Actor {
   def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = { // TODO: don't use Any
     val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
-    RoadsList = RoadsList ++ List((roadId, begin))
+    roads = roads :+ (roadId, begin)
   }
 }
 
@@ -37,18 +37,18 @@ class RightHandJunction() extends Junction {
   import TimeSynchronizer._
 
   var synchronizer: Int = -1
+
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, RoadsList))
+      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, roads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
     case AddRoad(id, map) =>
       super.addRoad(id, map)
   }
-
-
 }
+
 object SignJunction {
   final case class PriviledgeRoad(road: ActorRef)
 }
@@ -60,9 +60,10 @@ class SignJunction() extends Junction {
 
   var synchronizer: Int = -1
   var privilegedRoads: (ActorRef, ActorRef) = (null, null)
+
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, RoadsList, privilegedRoads))
+      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, roads, privilegedRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -80,29 +81,28 @@ class SignJunction() extends Junction {
   }
 }
 
-class SignalizationJunction(val GreenLightTime: Int = 10) extends Junction {
+class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
   import JunctionTypes._
   import Junction._
   import TimeSynchronizer._
 
-  var GreenLightRoadRef: ActorRef = null
-  var TimeToChange: Int = GreenLightTime
+  var greenLightRoadRef: ActorRef = null
+  var timeToChange: Int = greenLightTime
   var synchronizer: Int = -1
   var roadIterator: Int = 0
 
-
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, RoadsList, GreenLightRoadRef, TimeToChange))
+      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, roads, greenLightRoadRef, timeToChange))
     case ComputeTimeSlot(s) =>
-      TimeToChange match {
+      timeToChange match {
         case 0 =>
-          TimeToChange = GreenLightTime
-          if(RoadsList.exists(_._2 == false))
-            GreenLightRoadRef = RoadsList.filter(_._2 == false)(roadIterator)._1
-          roadIterator = (roadIterator + 1) % RoadsList.size
+          timeToChange = greenLightTime
+          if(roads.exists(_._2 == false))
+            greenLightRoadRef = roads.filter(_._2 == false)(roadIterator)._1
+          roadIterator = (roadIterator + 1) % roads.size
         case _ =>
-          TimeToChange -= 1
+          timeToChange -= 1
       }
       synchronizer = s
       sender() ! Computed
