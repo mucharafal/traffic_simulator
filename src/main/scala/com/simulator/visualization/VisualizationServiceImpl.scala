@@ -1,11 +1,12 @@
-package com.simulator.ui
+package com.simulator.visualization
 
+import com.simulator.common._
 import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.paint.Color
 import scalafx.scene.text.TextAlignment
 
-class Visualizer(val canvas: Canvas) {
+class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService {
 
   private val canvasPadding = 50
   private val roadLineWidth = 2
@@ -13,8 +14,16 @@ class Visualizer(val canvas: Canvas) {
   private val junctionOvalSize = 8
   private val carLabelOffset = 10
 
-  def drawSnapshot(snapshot: Snapshot): Unit = {
-    val boundingBox = calculateBoundingBox(snapshot)
+  override def visualize(snapshot: Snapshot): Unit = {
+    val junctionMap: Map[JunctionId, Junction] = snapshot.junctions.map { j => j.id -> j }.toMap
+    val roadMap: Map[RoadId, Road] = snapshot.roads.map { r => r.id -> r }.toMap
+
+    def getCarPosition(car: Car): Position = {
+      val road = roadMap(car.road)
+      Position.interpolate(junctionMap(road.start).position, junctionMap(road.end).position)(car.positionOnRoad)
+    }
+
+    val boundingBox = calculateBoundingBox(snapshot.junctions)
 
     val worldToScreenTransform = Seq(
       // 3. Move point (0, 0) to the center of the canvas
@@ -54,8 +63,8 @@ class Visualizer(val canvas: Canvas) {
     gc.stroke = Color.Black
     gc.lineWidth = roadLineWidth
     for (road <- snapshot.roads) {
-      val start = worldToScreen(road.start.position)
-      val end = worldToScreen(road.end.position)
+      val start = worldToScreen(junctionMap(road.start).position)
+      val end = worldToScreen(junctionMap(road.end).position)
       gc.strokeLine(start.x, start.y, end.x, end.y)
     }
 
@@ -69,24 +78,21 @@ class Visualizer(val canvas: Canvas) {
     // cars
     gc.fill = Color.Red
     for (car <- snapshot.cars) {
-      val pos = worldToScreen(calculateCarPosition(car))
+      val pos = worldToScreen(getCarPosition(car))
       gc.fillOval(pos.x - carOvalSize / 2, pos.y - carOvalSize / 2, carOvalSize, carOvalSize)
     }
 
     gc.fill = Color.Black
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
-      val pos = worldToScreen(calculateCarPosition(car))
+      val pos = worldToScreen(getCarPosition(car))
       gc.fillText(car.id.toString, pos.x, pos.y - carLabelOffset)
     }
   }
 
-  private def calculateCarPosition(car: Car): Position =
-    Position.interpolate(car.road.start.position, car.road.end.position)(car.positionOnRoad)
-
-  private def calculateBoundingBox(snapshot: Snapshot): Rect = {
-    val xs = snapshot.junctions.map { _.position.x }
-    val ys = snapshot.junctions.map { _.position.y }
+  private def calculateBoundingBox(junctions: Iterable[Junction]): Rect = {
+    val xs = junctions.map { _.position.x }
+    val ys = junctions.map { _.position.y }
     Rect.fromLTRB(
       left = xs.min,
       right = xs.max,
