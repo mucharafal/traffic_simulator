@@ -24,7 +24,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(rightHandJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> true))
+      junction ! AddRoad(mockRoad.ref, OutDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1, (rightHandJunction, List.empty, List(mockRoad.ref))))
@@ -36,10 +36,10 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mock = TestProbe()
 
       for(road <- outRoads) {
-        junction ! AddRoad(road.ref, Map("begin" -> true))
+        junction ! AddRoad(road.ref, OutDirection)
       }
       for(road <- inRoads){
-        junction ! AddRoad(road.ref, Map("begin" -> false))
+        junction ! AddRoad(road.ref, InDirection)
       }
 
       val inRoadRefs = inRoads.map(_.ref).toList
@@ -56,7 +56,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> true))
+      junction ! AddRoad(mockRoad.ref, OutDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1,
@@ -70,8 +70,8 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
 
       val mockRoad = TestProbe()
 
-      junction ! AddRoad(road1.ref, Map("begin" -> true))
-      junction ! AddRoad(road2.ref, Map("begin" -> true))
+      junction ! AddRoad(road1.ref, OutDirection)
+      junction ! AddRoad(road2.ref, OutDirection)
 
       val outRoadRefs = List(road1, road2).map(_.ref)
       val inRoadRefs = List.empty[ActorRef]
@@ -109,7 +109,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> true))
+      junction ! AddRoad(mockRoad.ref, OutDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1,
@@ -119,7 +119,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> true))
+      junction ! AddRoad(mockRoad.ref, OutDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1,
@@ -136,7 +136,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> false))
+      junction ! AddRoad(mockRoad.ref, InDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1,
@@ -161,7 +161,7 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
-      junction ! AddRoad(mockRoad.ref, Map("begin" -> true))
+      junction ! AddRoad(mockRoad.ref, OutDirection)
       mockRoad.send(junction, JunctionGetInformationRequest)
       mockRoad.expectMsg(100 millis,
         JunctionGetInformationResult(-1, (signalizationJunction, List.empty, List(mockRoad.ref), null, 10)))

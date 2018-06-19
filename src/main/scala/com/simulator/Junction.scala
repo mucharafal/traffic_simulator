@@ -1,6 +1,7 @@
 package com.simulator
 
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor.{Actor, ActorRef, Props}
+import com.simulator.Junction.{Direction, InDirection, OutDirection}
 
 object JunctionTypes extends Enumeration {
   type JunctionTypes = Value
@@ -19,21 +20,25 @@ object Junction {
         Props(new SignalizationJunction())
     }
   }
-  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any) // TODO: don't use Any
-  final case class AddRoad(id: ActorRef, roadInformation: Map[String, Any]) // TODO: don't use Any
+
   case object JunctionGetInformationRequest
+  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any) // TODO: don't use Any
+
+  sealed trait Direction
+  final object OutDirection extends Direction
+  final object InDirection extends Direction
+
+  final case class AddRoad(id: ActorRef, direction: Direction)
 }
 
 abstract class Junction extends Actor {
   var inRoads: List[ActorRef] = List.empty
   var outRoads: List[ActorRef] = List.empty
 
-  def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = { // TODO: don't use Any
-    val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
-    if (begin) {
-      outRoads :+= roadId
-    } else {
-      inRoads :+= roadId
+  def addRoad(roadId: ActorRef, direction: Direction) = {
+    direction match {
+      case InDirection => inRoads :+= roadId
+      case OutDirection => outRoads :+= roadId
     }
   }
 }
