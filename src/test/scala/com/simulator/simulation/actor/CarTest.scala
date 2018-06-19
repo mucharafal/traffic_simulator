@@ -22,8 +22,8 @@ class CarTest(_system: ActorSystem) extends TestKit(_system)
       val road = TestProbe()
       val car = system.actorOf(Car.props((road.ref, 0), (road.ref, 1), 0))
 
-      road.send(car, CarGetInformationRequest)
-      road.expectMsg(100 millis, CarGetInformationResult(
+      road.send(car, GetStatus)
+      road.expectMsg(100 millis, GetStatusResult(
         road.ref, 0, 0, false
       ))
     }

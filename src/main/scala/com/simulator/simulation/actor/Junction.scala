@@ -21,12 +21,12 @@ object Junction {
     }
   }
 
-  case object JunctionGetInformationRequest
-  final case class JunctionGetInformationResult(synchronizer: Int,
-                                                junctionType: JunctionTypes,
-                                                inRoads: List[ActorRef],
-                                                outRoads: List[ActorRef],
-                                                informationPackage: Any = ()) // TODO: don't use Any
+  case object GetStatus
+  final case class GetStatusResult(synchronizer: Int,
+                                   junctionType: JunctionTypes,
+                                   inRoads: List[ActorRef],
+                                   outRoads: List[ActorRef],
+                                   informationPackage: Any = ()) // TODO: don't use Any
 
   sealed trait Direction
   final object OutDirection extends Direction
@@ -55,8 +55,8 @@ class RightHandJunction() extends Junction {
   var synchronizer: Int = -1
 
   def receive = {
-    case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, rightHandJunction, inRoads, outRoads)
+    case GetStatus =>
+      sender() ! GetStatusResult(synchronizer, rightHandJunction, inRoads, outRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -78,8 +78,8 @@ class SignJunction() extends Junction {
   var privilegedRoads: (ActorRef, ActorRef) = (null, null)
 
   def receive = {
-    case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, signJunction, inRoads, outRoads, privilegedRoads)
+    case GetStatus =>
+      sender() ! GetStatusResult(synchronizer, signJunction, inRoads, outRoads, privilegedRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -108,8 +108,8 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
   var roadIterator: Int = 0
 
   def receive = {
-    case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, signalizationJunction, inRoads, outRoads, (greenLightRoadRef, timeToChange))
+    case GetStatus =>
+      sender() ! GetStatusResult(synchronizer, signalizationJunction, inRoads, outRoads, (greenLightRoadRef, timeToChange))
     case ComputeTimeSlot(s) =>
       timeToChange match {
         case 0 =>

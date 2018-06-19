@@ -13,12 +13,11 @@ object Car {
             driveAlgorithm: Any): Props = // TODO: proper type
     Props(new Car(currentPosition, destinationPosition, driveAlgorithm))
 
-  case object CarGetInformationRequest  //Get information about position, velocity, breaking signal
-                                              // and number of timeslot
-  final case class CarGetInformationResult(roadId: ActorRef,
-                                           position_x: Double,
-                                           velocity: Double,
-                                           breaking: Boolean)
+  case object GetStatus  //Get information about position, velocity, breaking signal and number of timeslot
+  final case class GetStatusResult(roadId: ActorRef,
+                                   position_x: Double,
+                                   velocity: Double,
+                                   breaking: Boolean)
   case object Crash
 }
 
@@ -45,8 +44,8 @@ class Car(currentPosition: PositionOnRoad,
 
 
   def receive = {
-    case CarGetInformationRequest =>
-      sender() ! CarGetInformationResult(roadId, positionX, velocity, breaking)
+    case GetStatus =>
+      sender() ! GetStatusResult(roadId, positionX, velocity, breaking)
     case ComputeTimeSlot(s) => {
       if(!crashed) {
         if(!started) {

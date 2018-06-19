@@ -24,9 +24,9 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val junction = system.actorOf(Junction.props(rightHandJunction))
 
       junction ! AddRoad(mockRoad.ref, OutDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, rightHandJunction, List.empty, List(mockRoad.ref)))
+        GetStatusResult(-1, rightHandJunction, List.empty, List(mockRoad.ref)))
     }
     "return correct information about itself 10 roads (adding is the same in every junction, so it is not copied)" in {
       val outRoads = (1 to 10).map(_ => TestProbe())
@@ -44,9 +44,9 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val inRoadRefs = inRoads.map(_.ref).toList
       val outRoadRefs = outRoads.map(_.ref).toList
 
-      mock.send(junction, JunctionGetInformationRequest)
+      mock.send(junction, GetStatus)
       mock.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, rightHandJunction, inRoadRefs, outRoadRefs))
+        GetStatusResult(-1, rightHandJunction, inRoadRefs, outRoadRefs))
     }
   }
   "A sign junction" should {
@@ -56,9 +56,9 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val junction = system.actorOf(Junction.props(signJunction))
 
       junction ! AddRoad(mockRoad.ref, OutDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signJunction, List.empty, List(mockRoad.ref), (null, null)))
+        GetStatusResult(-1, signJunction, List.empty, List(mockRoad.ref), (null, null)))
     }
     "correct set priviledge roads" in {
       import SignJunction._
@@ -74,27 +74,27 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val outRoadRefs = List(road1, road2).map(_.ref)
       val inRoadRefs = List.empty[ActorRef]
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signJunction, inRoadRefs, outRoadRefs, (null, null)))
+        GetStatusResult(-1, signJunction, inRoadRefs, outRoadRefs, (null, null)))
 
       junction ! PriviledgeRoad(road2.ref)
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, null)))
+        GetStatusResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, null)))
 
       junction ! PriviledgeRoad(road1.ref)
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, road1.ref)))
+        GetStatusResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, road1.ref)))
 
       junction ! PriviledgeRoad(road2.ref)
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, road1.ref)))
+        GetStatusResult(-1, signJunction, inRoadRefs, outRoadRefs, (road2.ref, road1.ref)))
 
     }
   }
@@ -104,68 +104,68 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
       junction ! AddRoad(mockRoad.ref, OutDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
+        GetStatusResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
     }
     "return correct value of time to light change" in {
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
       junction ! AddRoad(mockRoad.ref, OutDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
+        GetStatusResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
       import TimeSynchronizer._
 
       junction ! ComputeTimeSlot(0)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(0, signalizationJunction, List.empty, List(mockRoad.ref), (null, 9)))
+        GetStatusResult(0, signalizationJunction, List.empty, List(mockRoad.ref), (null, 9)))
     }
     "change the light" in {
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
       junction ! AddRoad(mockRoad.ref, InDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signalizationJunction, List(mockRoad.ref), List.empty, (null, 10)))
+        GetStatusResult(-1, signalizationJunction, List(mockRoad.ref), List.empty, (null, 10)))
       import TimeSynchronizer._
 
       for(i <- 1 to 10)
         junction ! ComputeTimeSlot(i)
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(10, signalizationJunction, List(mockRoad.ref), List.empty, (null, 0)))
+        GetStatusResult(10, signalizationJunction, List(mockRoad.ref), List.empty, (null, 0)))
 
       junction ! ComputeTimeSlot(0)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(0, signalizationJunction, List(mockRoad.ref), List.empty, (mockRoad.ref, 10)))
+        GetStatusResult(0, signalizationJunction, List(mockRoad.ref), List.empty, (mockRoad.ref, 10)))
     }
     "n't change the light when there is no road to junction" in {
       val mockRoad = TestProbe()
       val junction = system.actorOf(Junction.props(signalizationJunction))
 
       junction ! AddRoad(mockRoad.ref, OutDirection)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
+        GetStatusResult(-1, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
       import TimeSynchronizer._
 
       for(i <- 1 to 10)
         junction ! ComputeTimeSlot(i)
 
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(10, signalizationJunction, List.empty, List(mockRoad.ref), (null, 0)))
+        GetStatusResult(10, signalizationJunction, List.empty, List(mockRoad.ref), (null, 0)))
 
       junction ! ComputeTimeSlot(0)
-      mockRoad.send(junction, JunctionGetInformationRequest)
+      mockRoad.send(junction, GetStatus)
       mockRoad.expectMsg(100 millis,
-        JunctionGetInformationResult(0, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
+        GetStatusResult(0, signalizationJunction, List.empty, List(mockRoad.ref), (null, 10)))
     }
   }
 }
