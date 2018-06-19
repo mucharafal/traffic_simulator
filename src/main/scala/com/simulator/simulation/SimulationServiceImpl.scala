@@ -19,33 +19,53 @@ class SimulationServiceImpl(initialState: Snapshot)
   private var roads: Map[RoadId, ActorRef] = Map.empty
   private var cars: Map[CarId, ActorRef] = Map.empty
 
-  def initialize(): Future[Done] = {
+  private def createJunctionActor(junction: Junction): ActorRef = {
+    system.actorOf(
+      actor.Junction.props(JunctionTypes.signalizationJunction),
+      f"junction-${ junction.id.value }")
+  }
+
+  private def createRoadActor(road: Road, reversed: Boolean): ActorRef = {
+    val endActors = (junctions(road.start), junctions(road.end))
+
+    val (startActor, endActor) = if (reversed) endActors.swap else endActors
+    val suffix = if (reversed) "B" else "A"
+
+    system.actorOf(actor.Road.props(startActor, endActor, 5.0),
+      f"road-${ road.id.value }$suffix")
+  }
+
+  private def createCarActor(car: Car): ActorRef = {
+    val roadRef = roads(car.road)
+
+    system.actorOf(
+      actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null),
+      f"car-${ car.id.value }")
+  }
+
+  override def initialize(): Future[Done] = {
     timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props())
 
-    junctions = initialState.junctions.map { junction =>
-      junction.id -> system.actorOf(
-        actor.Junction.props(JunctionTypes.signalizationJunction),
-        f"junction-${ junction.id.value }")
-    }.toMap
+    junctions = initialState.junctions
+      .map { junction =>
+        junction.id -> createJunctionActor(junction)
+      }
+      .toMap
 
-    roads = initialState.roads.flatMap { road =>
-      val startActor = junctions(road.start)
-      val endActor = junctions(road.end)
+    roads = initialState.roads
+      .flatMap { road =>
+        Seq(
+          road.id -> createRoadActor(road, reversed = false),
+          road.id -> createRoadActor(road, reversed = true)
+        )
+      }
+      .toMap
 
-      Seq(
-        road.id -> system.actorOf(actor.Road.props(startActor, endActor, 5.0),
-          f"road-${ road.id.value }A"),
-        road.id -> system.actorOf(actor.Road.props(endActor, startActor, 5.0),
-          f"road-${ road.id.value }B")
-      )
-    }.toMap
-
-    cars = initialState.cars.map { car =>
-      val roadRef = roads(car.road)
-      car.id -> system.actorOf(
-        actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null),
-        f"car-${ car.id.value }")
-    }.toMap
+    cars = initialState.cars
+      .map { car =>
+        car.id -> createCarActor(car)
+      }
+      .toMap
 
     Future { Done }
   }
@@ -54,9 +74,9 @@ class SimulationServiceImpl(initialState: Snapshot)
     implicit val timeout: Timeout = 1 second
 
     for {
-      junctions <- Future.traverse(junctions) {
-        case (id, junction) =>
-          ask(junction, actor.Junction.GetStatus)
+      junctions: Iterable[Junction] <- Future.traverse(junctions) {
+        case (id, junctionActor) =>
+          ask(junctionActor, actor.Junction.GetStatus)
             .mapTo[actor.Junction.GetStatusResult]
             .map { status => // TODO: use status
               initialState.junctions.find { _.id == id }.get
@@ -64,8 +84,8 @@ class SimulationServiceImpl(initialState: Snapshot)
       }
 
       cars: Iterable[Car] <- Future.traverse(cars) {
-        case (id, car) =>
-          ask(car, actor.Car.GetStatus)
+        case (id, carActor) =>
+          ask(carActor, actor.Car.GetStatus)
             .mapTo[actor.Car.GetStatusResult]
             .map { status =>
               val roadId = roads.find { _._2 == status.roadId }.get._1
