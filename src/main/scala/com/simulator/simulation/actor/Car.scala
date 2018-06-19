@@ -1,6 +1,7 @@
 package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
+import com.simulator.common.CarId
 import com.simulator.simulation.actor.Car.PositionOnRoad
 import com.simulator.simulation.actor.Road._
 import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
@@ -8,10 +9,11 @@ import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
 object Car {
   type PositionOnRoad = (ActorRef, Double)
 
-  def props(currentPosition: PositionOnRoad,
+  def props(carId: CarId,
+            currentPosition: PositionOnRoad,
             destinationPosition: PositionOnRoad,
             driveAlgorithm: Any): Props = // TODO: proper type
-    Props(new Car(currentPosition, destinationPosition, driveAlgorithm))
+    Props(new Car(carId, currentPosition, destinationPosition, driveAlgorithm))
 
   case object GetStatus  //Get information about position, velocity, breaking signal and number of timeslot
   final case class GetStatusResult(roadId: ActorRef,
@@ -21,7 +23,8 @@ object Car {
   case object Crash
 }
 
-class Car(currentPosition: PositionOnRoad,
+class Car(carId: CarId,
+          currentPosition: PositionOnRoad,
           destinationPosition: PositionOnRoad,
           val driveAlgorithm: Any) extends Actor {
 

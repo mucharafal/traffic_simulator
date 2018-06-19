@@ -2,7 +2,7 @@ package com.simulator
 
 import akka.actor.ActorSystem
 import com.simulator.roadgeneration.{RoadGenerationService, RoadGenerationServiceImpl}
-import com.simulator.simulation.{SimulationService, StubSimulationServiceImpl}
+import com.simulator.simulation.{SimulationService, SimulationServiceImpl}
 import com.simulator.visualization.{VisualizationService, VisualizationServiceImpl}
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
@@ -35,12 +35,13 @@ object App extends JFXApp {
 
   private val initialSnapshot = roadGenerationService.generate(20, 10)
 
-  private val simulationService: SimulationService = new StubSimulationServiceImpl(initialSnapshot) // TODO
-
   private val visualizationService: VisualizationService = new VisualizationServiceImpl(canvas)
 
-  private val system = ActorSystem()
+  private implicit val system = ActorSystem()
   private implicit val ec: ExecutionContext = system.dispatcher
+
+  private val simulationService: SimulationService = new SimulationServiceImpl(initialSnapshot)
+  simulationService.initialize()
 
   system.scheduler.schedule(initialDelay = 0 seconds, interval = 100 milli) {
     val snapshot = simulationService.simulateTimeSlot()
