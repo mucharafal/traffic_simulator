@@ -1,6 +1,7 @@
 package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
+import akka.event.Logging
 
 object Road {
   def props(startJunction: ActorRef, endJunction: ActorRef, length: Double): Props =
@@ -23,8 +24,14 @@ class Road(val startJunction: ActorRef,
 
   import Road._
 
+  val log = Logging(context.system, this)
+
   var cars = List.empty[ActorRef]
   var synchronization: Int = -1
+
+  override def preStart() {
+    log.info("Started")
+  }
 
   def receive = {
     case GetNthCar(n) =>

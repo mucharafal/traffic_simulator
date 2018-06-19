@@ -1,6 +1,7 @@
 package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
+import akka.event.Logging
 import com.simulator.simulation.actor.Junction.{Direction, InDirection, OutDirection}
 
 object JunctionTypes extends Enumeration {
@@ -9,7 +10,9 @@ object JunctionTypes extends Enumeration {
 }
 
 object Junction {
+
   import JunctionTypes._
+
   def props(junctionType: JunctionTypes): Props = {
     junctionType match {
       case JunctionTypes.rightHandJunction =>
@@ -36,20 +39,31 @@ object Junction {
 }
 
 abstract class Junction extends Actor {
+  val log = Logging(context.system, this)
+
   var inRoads: List[ActorRef] = List.empty
   var outRoads: List[ActorRef] = List.empty
 
+  override def preStart() {
+    log.info("Started")
+  }
+
   def addRoad(roadId: ActorRef, direction: Direction) = {
     direction match {
-      case InDirection => inRoads :+= roadId
-      case OutDirection => outRoads :+= roadId
+      case InDirection =>
+        inRoads :+= roadId
+        log.info("Added in road")
+      case OutDirection =>
+        outRoads :+= roadId
+        log.info("Added out road")
     }
   }
 }
 
 class RightHandJunction() extends Junction {
-  import JunctionTypes._
+
   import Junction._
+  import JunctionTypes._
   import TimeSynchronizer._
 
   var synchronizer: Int = -1
@@ -69,10 +83,11 @@ object SignJunction {
   final case class PriviledgeRoad(road: ActorRef)
 }
 class SignJunction() extends Junction {
-  import JunctionTypes._
+
   import Junction._
-  import TimeSynchronizer._
+  import JunctionTypes._
   import SignJunction._
+  import TimeSynchronizer._
 
   var synchronizer: Int = -1
   var privilegedRoads: (ActorRef, ActorRef) = (null, null)
@@ -98,8 +113,9 @@ class SignJunction() extends Junction {
 }
 
 class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
-  import JunctionTypes._
+
   import Junction._
+  import JunctionTypes._
   import TimeSynchronizer._
 
   var greenLightRoadRef: ActorRef = null

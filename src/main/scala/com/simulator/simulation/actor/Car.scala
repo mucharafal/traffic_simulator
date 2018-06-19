@@ -1,6 +1,7 @@
 package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
+import akka.event.Logging
 import com.simulator.common.CarId
 import com.simulator.simulation.actor.Car.PositionOnRoad
 import com.simulator.simulation.actor.Road._
@@ -29,6 +30,9 @@ class Car(carId: CarId,
           val driveAlgorithm: Any) extends Actor {
 
   import Car._
+
+  val log = Logging(context.system, this)
+
   var (roadId, positionX) = currentPosition
   val (destinationRoadId, destinationPositionX) = destinationPosition
   //what to do in time slot
@@ -45,6 +49,9 @@ class Car(carId: CarId,
   roadId ! GetLength
   roadId ! GetEndJunction
 
+  override def preStart() {
+    log.info("Started")
+  }
 
   def receive = {
     case GetStatus =>

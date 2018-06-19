@@ -23,7 +23,9 @@ class SimulationServiceImpl(initialState: Snapshot)
     timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props())
 
     junctions = initialState.junctions.map { junction =>
-      junction.id -> system.actorOf(actor.Junction.props(JunctionTypes.signalizationJunction))
+      junction.id -> system.actorOf(
+        actor.Junction.props(JunctionTypes.signalizationJunction),
+        f"junction-${ junction.id.value }")
     }.toMap
 
     roads = initialState.roads.flatMap { road =>
@@ -31,14 +33,18 @@ class SimulationServiceImpl(initialState: Snapshot)
       val endActor = junctions(road.end)
 
       Seq(
-        road.id -> system.actorOf(actor.Road.props(startActor, endActor, 5.0)),
-        road.id -> system.actorOf(actor.Road.props(startActor, endActor, 5.0))
+        road.id -> system.actorOf(actor.Road.props(startActor, endActor, 5.0),
+          f"road-${ road.id.value }A"),
+        road.id -> system.actorOf(actor.Road.props(endActor, startActor, 5.0),
+          f"road-${ road.id.value }B")
       )
     }.toMap
 
     cars = initialState.cars.map { car =>
       val roadRef = roads(car.road)
-      car.id -> system.actorOf(actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null))
+      car.id -> system.actorOf(
+        actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null),
+        f"car-${ car.id.value }")
     }.toMap
 
     Future { Done }
