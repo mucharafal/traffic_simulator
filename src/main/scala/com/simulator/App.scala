@@ -11,8 +11,8 @@ import scalafx.scene.canvas.Canvas
 import scalafx.scene.layout.HBox
 import scalafx.scene.paint.Color
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 object App extends JFXApp {
 
@@ -37,14 +37,14 @@ object App extends JFXApp {
 
   private val visualizationService: VisualizationService = new VisualizationServiceImpl(canvas)
 
-  private implicit val system = ActorSystem()
+  private implicit val system: ActorSystem = ActorSystem()
   private implicit val ec: ExecutionContext = system.dispatcher
 
   private val simulationService: SimulationService = new SimulationServiceImpl(initialSnapshot)
-  simulationService.initialize()
+  Await.ready(simulationService.initialize(), 2 second)
 
   system.scheduler.schedule(initialDelay = 0 seconds, interval = 100 milli) {
-    val snapshot = simulationService.simulateTimeSlot()
+    val snapshot = Await.result(simulationService.simulateTimeSlot(), 50 milli)
     visualizationService.visualize(snapshot)
   }
 

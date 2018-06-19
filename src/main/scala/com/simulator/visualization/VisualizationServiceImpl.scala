@@ -13,7 +13,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
   private val roadLineWidth = 2
   private val carOvalSize = 10
   private val junctionOvalSize = 8
-  private val carLabelOffset = 10
+  private val carLabelOffset = -40
 
   override def visualize(snapshot: Snapshot): Unit = {
     val junctionMap: Map[JunctionId, Junction] = snapshot.junctions.keyBy { _.id }
@@ -87,7 +87,8 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
       val pos = worldToScreen(getCarPosition(car))
-      gc.fillText(car.id.toString, pos.x, pos.y - carLabelOffset)
+      val text = f"car #${car.id.value}\nspeed=${car.velocity}\nbreaking=${car.breaking}"
+      gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
   }
 

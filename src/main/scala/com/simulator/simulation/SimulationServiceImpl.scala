@@ -1,5 +1,6 @@
 package com.simulator.simulation
 
+import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -8,7 +9,7 @@ import com.simulator.simulation.actor.JunctionTypes
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class SimulationServiceImpl(initialState: Snapshot)
                            (implicit system: ActorSystem, ec: ExecutionContext) extends SimulationService {
@@ -18,7 +19,7 @@ class SimulationServiceImpl(initialState: Snapshot)
   private var roads: Map[RoadId, ActorRef] = Map.empty
   private var cars: Map[CarId, ActorRef] = Map.empty
 
-  def initialize() {
+  def initialize(): Future[Done] = {
     timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props())
 
     junctions = initialState.junctions.map { junction =>
@@ -40,12 +41,13 @@ class SimulationServiceImpl(initialState: Snapshot)
       car.id -> system.actorOf(actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null))
     }.toMap
 
+    Future { Done }
   }
 
-  override def simulateTimeSlot(): Snapshot = {
+  override def simulateTimeSlot(): Future[Snapshot] = {
     implicit val timeout: Timeout = 1 second
 
-    val snapshot = for {
+    for {
       junctions <- Future.traverse(junctions) {
         case (id, junction) =>
           ask(junction, actor.Junction.GetStatus)
@@ -61,13 +63,12 @@ class SimulationServiceImpl(initialState: Snapshot)
             .mapTo[actor.Car.GetStatusResult]
             .map { status =>
               val roadId = roads.find { _._2 == status.roadId }.get._1
-              Car(id, roadId, status.position_x.toFloat)
+              Car(id, roadId, status.position_x.toFloat, status.velocity.toFloat, status.breaking)
             }
       }
     } yield {
       Snapshot(junctions.to[Seq], initialState.roads, cars.to[Seq])
     }
-    Await.result(snapshot, 1 second)
   }
 
 }
