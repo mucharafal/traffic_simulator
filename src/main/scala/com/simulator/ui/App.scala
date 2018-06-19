@@ -36,7 +36,7 @@ object App extends JFXApp {
   private val system = ActorSystem()
   private implicit val ec: ExecutionContext = system.dispatcher
 
-  system.scheduler.schedule(initialDelay = 0 seconds, interval = 1 second) {
+  system.scheduler.schedule(initialDelay = 0 seconds, interval = 100 milli) {
     visualizer.drawSnapshot(snapshot)
   }
 

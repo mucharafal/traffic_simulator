@@ -13,7 +13,7 @@ case class Rect(x: Float, y: Float, w: Float, h: Float)
 
 object Rect {
   def fromLTRB(left: Float, top: Float, right: Float, bottom: Float) =
-    Rect(left, top, right - top, bottom - top)
+    Rect(left, top, right - left, bottom - top)
 }
 
 case class Car(id: Int, road: Road, positionOnRoad: Float)
