@@ -1,7 +1,7 @@
-package com.simulator
+package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
-import com.simulator.Junction.{Direction, InDirection, OutDirection}
+import com.simulator.simulation.actor.Junction.{Direction, InDirection, OutDirection}
 
 object JunctionTypes extends Enumeration {
   type JunctionTypes = Value

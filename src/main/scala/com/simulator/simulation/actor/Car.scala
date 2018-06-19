@@ -1,9 +1,9 @@
-package com.simulator
+package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
-import Road._
-import com.simulator.Car.PositionOnRoad
-import com.simulator.TimeSynchronizer.ComputeTimeSlot
+import com.simulator.simulation.actor.Car.PositionOnRoad
+import com.simulator.simulation.actor.Road._
+import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
 
 object Car {
   type PositionOnRoad = (ActorRef, Double)

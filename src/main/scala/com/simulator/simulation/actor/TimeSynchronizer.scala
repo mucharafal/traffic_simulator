@@ -1,4 +1,4 @@
-package com.simulator
+package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 

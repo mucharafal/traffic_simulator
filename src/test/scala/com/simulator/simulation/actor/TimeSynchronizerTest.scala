@@ -1,8 +1,8 @@
-package com.simulator
+package com.simulator.simulation.actor
 
 import akka.actor.ActorSystem
 import akka.testkit.{TestKit, TestProbe}
-import com.simulator.TimeSynchronizer._
+import com.simulator.simulation.actor.TimeSynchronizer._
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._

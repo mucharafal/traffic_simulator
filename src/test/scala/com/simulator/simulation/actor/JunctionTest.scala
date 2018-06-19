@@ -1,14 +1,13 @@
-package com.simulator
+package com.simulator.simulation.actor
 
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestKit, TestProbe}
+import com.simulator.simulation.actor.Junction._
+import com.simulator.simulation.actor.JunctionTypes._
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import Junction._
-import JunctionTypes._
-
 
 class JunctionTest(_system: ActorSystem) extends TestKit(_system)
   with Matchers with WordSpecLike with BeforeAndAfterAll {

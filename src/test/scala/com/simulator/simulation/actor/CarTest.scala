@@ -1,18 +1,12 @@
-package com.simulator
+package com.simulator.simulation.actor
 
-import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
 import akka.actor.ActorSystem
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{TestKit, TestProbe}
+import com.simulator.simulation.actor.Car._
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
-import Junction._
-import JunctionTypes._
-import SignJunction._
-
-import TimeSynchronizer._
-import Road._
-import Car._
 
 class CarTest(_system: ActorSystem) extends TestKit(_system)
   with Matchers with WordSpecLike with BeforeAndAfterAll {
