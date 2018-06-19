@@ -24,10 +24,17 @@ object Junction {
   case object JunctionGetInformationRequest
 }
 
-abstract class Junction(var roads: List[(ActorRef, Boolean)] = List.empty) extends Actor {
+abstract class Junction extends Actor {
+  var inRoads: List[ActorRef] = List.empty
+  var outRoads: List[ActorRef] = List.empty
+
   def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = { // TODO: don't use Any
     val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
-    roads = roads :+ (roadId, begin)
+    if (begin) {
+      outRoads :+= roadId
+    } else {
+      inRoads :+= roadId
+    }
   }
 }
 
@@ -40,7 +47,7 @@ class RightHandJunction() extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, roads))
+      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, inRoads, outRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -63,7 +70,7 @@ class SignJunction() extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, roads, privilegedRoads))
+      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, inRoads, outRoads, privilegedRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -93,14 +100,15 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, roads, greenLightRoadRef, timeToChange))
+      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, inRoads, outRoads, greenLightRoadRef, timeToChange))
     case ComputeTimeSlot(s) =>
       timeToChange match {
         case 0 =>
           timeToChange = greenLightTime
-          if(roads.exists(_._2 == false))
-            greenLightRoadRef = roads.filter(_._2 == false)(roadIterator)._1
-          roadIterator = (roadIterator + 1) % roads.size
+          if (inRoads.nonEmpty) {
+            greenLightRoadRef = inRoads(roadIterator)
+            roadIterator = (roadIterator + 1) % inRoads.size
+          }
         case _ =>
           timeToChange -= 1
       }
