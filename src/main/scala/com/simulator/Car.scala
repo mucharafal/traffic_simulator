@@ -2,11 +2,14 @@ package com.simulator
 
 import akka.actor.{Actor, ActorRef, Props}
 import Road._
+import com.simulator.Car.PositionOnRoad
 import com.simulator.TimeSynchronizer.ComputeTimeSlot
 
 object Car {
-  def props(currentPosition:(ActorRef, Double),
-            destinationPosition:(ActorRef, Double),
+  type PositionOnRoad = (ActorRef, Double)
+
+  def props(currentPosition: PositionOnRoad,
+            destinationPosition: PositionOnRoad,
             driveAlgorithm: Any): Props =
     Props(new Car(currentPosition, destinationPosition, driveAlgorithm))
 
@@ -19,8 +22,8 @@ object Car {
   case object Crash
 }
 
-class Car(currentPosition:(ActorRef, Double),
-          destinationPosition:(ActorRef, Double),
+class Car(currentPosition: PositionOnRoad,
+          destinationPosition: PositionOnRoad,
           val driveAlgorithm: Any) extends Actor {
 
   import Car._
@@ -47,7 +50,7 @@ class Car(currentPosition:(ActorRef, Double),
     case ComputeTimeSlot(s) => {
       if(!crashed) {
         if(!started) {
-          var newPosition = positionX + velocity + acceleration / 2
+          val newPosition = positionX + velocity + acceleration / 2
           if (newPosition - currentRoadLength > 0) {
             //nextJunction ! Turning(roadId, roadToTurnOn) TODO
             positionX = newPosition - currentRoadLength
