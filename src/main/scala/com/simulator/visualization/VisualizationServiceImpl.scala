@@ -1,6 +1,7 @@
 package com.simulator.visualization
 
 import com.simulator.common._
+import com.simulator.util.CollectionExtensions._
 import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.paint.Color
@@ -15,8 +16,8 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
   private val carLabelOffset = 10
 
   override def visualize(snapshot: Snapshot): Unit = {
-    val junctionMap: Map[JunctionId, Junction] = snapshot.junctions.map { j => j.id -> j }.toMap
-    val roadMap: Map[RoadId, Road] = snapshot.roads.map { r => r.id -> r }.toMap
+    val junctionMap: Map[JunctionId, Junction] = snapshot.junctions.keyBy { _.id }
+    val roadMap: Map[RoadId, Road] = snapshot.roads.keyBy { _.id }
 
     def getCarPosition(car: Car): Position = {
       val road = roadMap(car.road)
