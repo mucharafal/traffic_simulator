@@ -55,7 +55,7 @@ class RightHandJunction() extends Junction {
       sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, inRoads, outRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
-      sender() ! Computed
+      sender() ! InfrastructureComputed
     case AddRoad(id, map) =>
       super.addRoad(id, map)
   }
@@ -78,7 +78,7 @@ class SignJunction() extends Junction {
       sender() ! JunctionGetInformationResult(synchronizer, (signJunction, inRoads, outRoads, privilegedRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
-      sender() ! Computed
+      sender() ! InfrastructureComputed
     case AddRoad(id, map) =>
       super.addRoad(id, map)
     case PriviledgeRoad(ref) =>
@@ -118,8 +118,9 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
           timeToChange -= 1
       }
       synchronizer = s
-      sender() ! Computed
+      sender() ! InfrastructureComputed
     case AddRoad(id, map) =>
       super.addRoad(id, map)
   }
 }
+

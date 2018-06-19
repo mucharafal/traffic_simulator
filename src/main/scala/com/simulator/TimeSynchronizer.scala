@@ -5,33 +5,57 @@ import akka.actor.{Actor, ActorRef, Props}
 import scala.collection.immutable.Seq
 
 object TimeSynchronizer {
-  def props(): Props = Props(new TimeSynchronizer(Seq.empty))
+  def props(): Props = Props(new TimeSynchronizer(Seq.empty, Seq.empty))
 
   final case class ComputeTimeSlot(n: Int) //computation in time slot ended
-  final case class AddObject(id: ActorRef)
-  final case class RemoveObject(id: ActorRef)
-  case object Computed
+  final case class AddCar(id: ActorRef)
+  final case class RemoveCar(id: ActorRef)
+  final case class AddInfrastructure(id: ActorRef)
+  final case class RemoveInfrastructure(id: ActorRef)
+  case object CarComputed
+  case object InfrastructureComputed
+  case object Start
 }
 
-class TimeSynchronizer(var objects: Seq[ActorRef]) extends Actor {
+class TimeSynchronizer(var cars: Seq[ActorRef], var infrastructure: Seq[ActorRef]) extends Actor {
   import TimeSynchronizer._
 
-  var sentMessagesCounter = 0
-  var receivedMessagesCounter = 0
+  var sentMessagesCounter = 0         //number of sending turns since start synchronizer
+                                      //using to synchronize turns
+  var receivedMessagesFromCarsCounter = 0
+  var receivedMessagesFromInfrastructureCounter = 0
+
+  var started: Boolean = false
 
   def receive = {
-    case Computed =>
-      val clientRef = sender()
-      if (objects.nonEmpty && objects.contains(clientRef)) {
-        receivedMessagesCounter += 1
-        if (receivedMessagesCounter == objects.size) {
-          receivedMessagesCounter = 0
-          objects.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
-          sentMessagesCounter += 1
-          sentMessagesCounter %= 1000000
+    case CarComputed =>
+      started = true
+      val carRef = sender()
+      if (cars.contains(carRef) && !cars.isEmpty) {
+        receivedMessagesFromCarsCounter += 1
+        if (receivedMessagesFromCarsCounter == cars.size) {
+          receivedMessagesFromCarsCounter = 0
+          infrastructure.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
         }
       }
-    case AddObject(id) => objects :+= id
-    case RemoveObject(id) => objects = objects.filter(_ != id)
+    case InfrastructureComputed =>
+      val infrastructureRef = sender()
+      if (infrastructure.contains(infrastructureRef) && !infrastructure.isEmpty) {
+        receivedMessagesFromInfrastructureCounter += 1
+        if (receivedMessagesFromInfrastructureCounter == infrastructure.size) {
+          receivedMessagesFromInfrastructureCounter = 0
+          sentMessagesCounter += 1
+          sentMessagesCounter %= 1000000
+          cars.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
+        }
+      }
+    case AddCar(id) => cars :+= id
+    case RemoveCar(id) => cars = cars.filter(_ != id)
+    case AddInfrastructure(id) => infrastructure :+= id
+    case RemoveInfrastructure(id) => infrastructure = infrastructure.filter(_ != id)
+    case Start =>
+      if(!started) {
+        cars.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
+      }
   }
 }

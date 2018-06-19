@@ -1,3 +1,4 @@
+/*
 package com.simulator
 
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
@@ -36,4 +37,4 @@ class CarTest(_system: ActorSystem) extends TestKit(_system)
 
   }
 
-}
+}*/

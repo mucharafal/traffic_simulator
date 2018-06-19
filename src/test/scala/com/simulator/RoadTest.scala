@@ -39,6 +39,13 @@ class RoadTest(_system: ActorSystem) extends TestKit(_system)
       mock.send(road, GetNthCar(2))
       mock.expectMsg(500 millis, NthCar(None))
     }
+    "correct add and remove cars" in {
+      val cars = (1 to 10).map(_ => TestProbe())
+      val road = system.actorOf(Road.props(mock.ref, mock.ref, 5.0))
+
+      cars.foreach(r => road ! AddCar(r.ref))
+      //todo
+    }
   }
 
 }
