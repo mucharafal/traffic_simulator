@@ -51,11 +51,12 @@ class Car(currentPosition: PositionOnRoad,
       synchronizer = s
       if(!crashed) {
         if(!started) {
-          val newPosition = position + velocity + acceleration / 2
+          val distance = velocity + acceleration / 2
+          val newPosition = position + distance
           if (newPosition - currentRoadLength > 0) {
             //nextJunction ! Turning(roadId, roadToTurnOn) TODO
             position = newPosition - currentRoadLength
-            roadToTurnOn ! AddCar(self)
+            roadToTurnOn ! AddCar(self, distance / position, position)
             roadId ! RemoveCar(self)
             roadId = roadToTurnOn
             roadId ! GetLength
