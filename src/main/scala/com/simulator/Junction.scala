@@ -22,7 +22,11 @@ object Junction {
   }
 
   case object JunctionGetInformationRequest
-  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any) // TODO: don't use Any
+  final case class JunctionGetInformationResult(synchronizer: Int,
+                                                junctionType: JunctionTypes,
+                                                inRoads: List[ActorRef],
+                                                outRoads: List[ActorRef],
+                                                informationPackage: Any = ()) // TODO: don't use Any
 
   sealed trait Direction
   final object OutDirection extends Direction
@@ -52,7 +56,7 @@ class RightHandJunction() extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, inRoads, outRoads))
+      sender() ! JunctionGetInformationResult(synchronizer, rightHandJunction, inRoads, outRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -75,7 +79,7 @@ class SignJunction() extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, inRoads, outRoads, privilegedRoads))
+      sender() ! JunctionGetInformationResult(synchronizer, signJunction, inRoads, outRoads, privilegedRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -105,7 +109,7 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, inRoads, outRoads, greenLightRoadRef, timeToChange))
+      sender() ! JunctionGetInformationResult(synchronizer, signalizationJunction, inRoads, outRoads, (greenLightRoadRef, timeToChange))
     case ComputeTimeSlot(s) =>
       timeToChange match {
         case 0 =>
