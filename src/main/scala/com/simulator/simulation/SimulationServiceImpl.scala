@@ -20,9 +20,13 @@ class SimulationServiceImpl(initialState: Snapshot)
   private var cars: Map[CarId, ActorRef] = Map.empty
 
   private def createJunctionActor(junction: Junction): ActorRef = {
-    system.actorOf(
+    val junctionActor = system.actorOf(
       actor.Junction.props(JunctionTypes.signalizationJunction),
       f"junction-${ junction.id.value }")
+
+    timeSynchronizer ! actor.TimeSynchronizer.AddObject(junctionActor)
+
+    junctionActor
   }
 
   private def createRoadActor(road: Road, reversed: Boolean): ActorRef = {
@@ -31,20 +35,30 @@ class SimulationServiceImpl(initialState: Snapshot)
     val (startActor, endActor) = if (reversed) endActors.swap else endActors
     val suffix = if (reversed) "B" else "A"
 
-    system.actorOf(actor.Road.props(startActor, endActor, 5.0),
+    val roadActor = system.actorOf(actor.Road.props(startActor, endActor, 5.0),
       f"road-${ road.id.value }$suffix")
+
+    startActor ! actor.Junction.AddRoad(roadActor, actor.Junction.OutDirection)
+    endActor ! actor.Junction.AddRoad(roadActor, actor.Junction.InDirection)
+    timeSynchronizer ! actor.TimeSynchronizer.AddObject(roadActor)
+
+    roadActor
   }
 
   private def createCarActor(car: Car): ActorRef = {
-    val roadRef = roads(car.road)
+    val roadActor = roads(car.road)
 
-    system.actorOf(
-      actor.Car.props(car.id, (roadRef, car.positionOnRoad), (roadRef, 1.0), null),
+    val carActor = system.actorOf(
+      actor.Car.props(car.id, (roadActor, car.positionOnRoad), (roadActor, 1.0), null),
       f"car-${ car.id.value }")
+
+    roadActor ! actor.Road.AddCar(carActor, car.positionOnRoad)
+
+    carActor
   }
 
   override def initialize(): Future[Done] = {
-    timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props())
+    timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props(), "timeSynchronizer")
 
     junctions = initialState.junctions
       .map { junction =>

@@ -52,10 +52,10 @@ abstract class Junction extends Actor {
     direction match {
       case InDirection =>
         inRoads :+= roadId
-        log.info("Added in road")
+        log.info(s"Added in road ${roadId.path}")
       case OutDirection =>
         outRoads :+= roadId
-        log.info("Added out road")
+        log.info(s"Added out road ${roadId.path}")
     }
   }
 }

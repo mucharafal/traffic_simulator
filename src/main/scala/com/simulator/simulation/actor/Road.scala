@@ -38,6 +38,7 @@ class Road(val startJunction: ActorRef,
       sender() ! NthCar(cars.lift(n - 1))
     case AddCar(ref, pos) => // TODO: pos
       cars :+= ref
+      log.info(s"Add car ${ref.path}")
     case RemoveCar(ref) =>
       cars = cars.filter(_ != ref)
     case GetEndJunction =>
