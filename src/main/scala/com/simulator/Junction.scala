@@ -1,8 +1,5 @@
 package com.simulator
 
-import javax.sql.RowSetMetaData
-
-import scala.runtime.Nothing$
 import akka.actor.{Props, ActorRef, Actor}
 
 object JunctionTypes extends Enumeration {
@@ -30,7 +27,7 @@ object Junction {
 abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
   def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = {
     val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
-    RoadsList = RoadsList ++ List(Tuple2(roadId, begin))
+    RoadsList = RoadsList ++ List((roadId, begin))
   }
 }
 
@@ -42,7 +39,7 @@ class RightHandJunction() extends Junction {
   var synchronizer: Int = -1
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, Tuple2(rightHandJunction, RoadsList))
+      sender() ! JunctionGetInformationResult(synchronizer, (rightHandJunction, RoadsList))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -62,10 +59,10 @@ class SignJunction() extends Junction {
   import SignJunction._
 
   var synchronizer: Int = -1
-  var privilegedRoads: (ActorRef, ActorRef) = Tuple2(null, null)
+  var privilegedRoads: (ActorRef, ActorRef) = (null, null)
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, Tuple3(signJunction, RoadsList, privilegedRoads))
+      sender() ! JunctionGetInformationResult(synchronizer, (signJunction, RoadsList, privilegedRoads))
     case ComputeTimeSlot(s) =>
       synchronizer = s
       sender() ! Computed
@@ -74,9 +71,9 @@ class SignJunction() extends Junction {
     case PriviledgeRoad(ref) =>
       privilegedRoads = privilegedRoads match {
         case (null, null) =>
-          Tuple2(ref, null)
+          (ref, null)
         case (sth, null) =>
-          Tuple2(sth, ref)
+          (sth, ref)
         case (sth, sth2) =>
           privilegedRoads
       }
@@ -96,7 +93,7 @@ class SignalizationJunction(val GreenLightTime: Int = 10) extends Junction {
 
   def receive = {
     case JunctionGetInformationRequest =>
-      sender() ! JunctionGetInformationResult(synchronizer, Tuple4(signalizationJunction, RoadsList, GreenLightRoadRef, TimeToChange))
+      sender() ! JunctionGetInformationResult(synchronizer, (signalizationJunction, RoadsList, GreenLightRoadRef, TimeToChange))
     case ComputeTimeSlot(s) =>
       TimeToChange match {
         case 0 =>
