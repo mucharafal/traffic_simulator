@@ -19,13 +19,13 @@ object Junction {
         Props(new SignalizationJunction())
     }
   }
-  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any)
-  final case class AddRoad(id: ActorRef, roadInformation: Map[String, Any])
+  final case class JunctionGetInformationResult(synchronizer: Int, informationPackage: Any) // TODO: don't use Any
+  final case class AddRoad(id: ActorRef, roadInformation: Map[String, Any]) // TODO: don't use Any
   case object JunctionGetInformationRequest
 }
 
 abstract class Junction(var RoadsList: List[(ActorRef, Boolean)] = List()) extends Actor {
-  def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = {
+  def addRoad(roadId: ActorRef, roadInformation: Map[String, Any]) = { // TODO: don't use Any
     val begin: Boolean = roadInformation("begin").asInstanceOf[Boolean]
     RoadsList = RoadsList ++ List((roadId, begin))
   }

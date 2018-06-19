@@ -10,7 +10,7 @@ object Car {
 
   def props(currentPosition: PositionOnRoad,
             destinationPosition: PositionOnRoad,
-            driveAlgorithm: Any): Props =
+            driveAlgorithm: Any): Props = // TODO: proper type
     Props(new Car(currentPosition, destinationPosition, driveAlgorithm))
 
   case object CarGetInformationRequest  //Get information about position, velocity, breaking signal
