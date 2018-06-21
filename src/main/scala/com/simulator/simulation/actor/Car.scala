@@ -68,7 +68,7 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
 //        }
         junctionState <- ask(nextJunction, Junction.GetState).mapTo[Junction.GetStateResult]
 
-        increasedPosition = position + 0.1
+        increasedPosition = position + 0.05
 
         (newRoad: RoadRef, newPosition: Double) =
           if (increasedPosition < roadLength) {

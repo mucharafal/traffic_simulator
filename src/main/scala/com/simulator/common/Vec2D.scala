@@ -13,7 +13,7 @@ case class Vec2D(x: Double, y: Double) {
   def normalized = this / length
 
   def interpolate(other: Vec2D) = (alpha: Double) =>
-    this * alpha + other * (1 - alpha)
+    this * (1 - alpha) + other * alpha
 
   def rotated90DegreesCW = Vec2D(-y, x)
   def rotated90DegreesCCW = -rotated90DegreesCW

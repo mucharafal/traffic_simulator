@@ -10,20 +10,15 @@ import scalafx.scene.text.TextAlignment
 class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService {
 
   private val canvasPadding = 50
-  private val roadLineWidth = 2
-  private val roadsDistance = 4
+  private val roadLineWidth = 4
+  private val roadsDistance = 5
   private val carOvalSize = 10
-  private val junctionOvalSize = 8
-  private val carLabelOffset = -40
+  private val junctionOvalSize = 12
+  private val carLabelOffset = 10
 
   override def visualize(snapshot: Snapshot): Unit = {
     val junctionMap: Map[JunctionId, JunctionState] = snapshot.junctions.keyBy { _.id }
     val roadMap: Map[RoadId, RoadState] = snapshot.roads.keyBy { _.id }
-
-    def getCarPosition(car: CarState): Vec2D = {
-      val road = roadMap(car.road)
-      (junctionMap(road.start).position interpolate junctionMap(road.end).position)(car.positionOnRoad)
-    }
 
     val boundingBox = calculateBoundingBox(snapshot.junctions)
 
@@ -54,6 +49,24 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       Vec2D(point.getX, point.getY)
     }
 
+    def roadPosition(road: RoadState): (Vec2D, Vec2D) = {
+      val startJunction = junctionMap(road.start)
+      val endJunction = junctionMap(road.end)
+      val startPosition = worldToScreen(startJunction.position)
+      val endPosition = worldToScreen(endJunction.position)
+      val direction = (endPosition - startPosition).normalized
+      val offset = direction.rotated90DegreesCW * (roadsDistance / 2.0)
+
+      (startPosition + offset + direction * (junctionOvalSize / 2.0),
+        endPosition + offset - direction * (junctionOvalSize / 2.0))
+    }
+
+    def carPosition(car: CarState): Vec2D = {
+      val road = roadMap(car.road)
+      val (roadStart, roadEnd) = roadPosition(road)
+      (roadStart interpolate roadEnd) (car.positionOnRoad)
+    }
+
     val gc = canvas.graphicsContext2D
 
     gc.getTransform
@@ -64,25 +77,23 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     // roads
     gc.lineWidth = roadLineWidth
     for (road <- snapshot.roads) {
-      val startJunction = junctionMap(road.start)
+      val (startPosition, endPosition) = roadPosition(road)
+      val midPosition = (startPosition interpolate endPosition) (0.8)
       val endJunction = junctionMap(road.end)
-      var start = worldToScreen(startJunction.position)
-      var end = worldToScreen(endJunction.position)
 
-      val offset = (end - start).normalized.rotated90DegreesCCW * (roadsDistance / 2)
-      start += offset
-      end += offset
+      gc.stroke = Color.Black
+      gc.strokeLine(startPosition.x, startPosition.y, midPosition.x, midPosition.y)
 
-        gc.stroke =
+      gc.stroke =
         if (endJunction.greenLightRoad.contains(road.id))
           Color.Green
         else
           Color.Black
-      gc.strokeLine(start.x, start.y, end.x, end.y)
+      gc.strokeLine(midPosition.x, midPosition.y, endPosition.x, endPosition.y)
     }
 
     // junctions
-    gc.fill = Color.Black
+    gc.fill = Color.Grey
     for (junction <- snapshot.junctions) {
       val pos = worldToScreen(junction.position)
       gc.fillOval(pos.x - junctionOvalSize / 2, pos.y - junctionOvalSize / 2, junctionOvalSize, junctionOvalSize)
@@ -91,15 +102,15 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     // cars
     gc.fill = Color.Red
     for (car <- snapshot.cars) {
-      val pos = worldToScreen(getCarPosition(car))
+      val pos = carPosition(car)
       gc.fillOval(pos.x - carOvalSize / 2, pos.y - carOvalSize / 2, carOvalSize, carOvalSize)
     }
 
-    gc.fill = Color.Black
+    gc.fill = Color.Red
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
-      val pos = worldToScreen(getCarPosition(car))
-      val text = f"car #${ car.id.value }\nspeed=${ car.velocity }\nbreaking=${ car.breaking }"
+      val pos = carPosition(car)
+      val text = f"car #${ car.id.value }"
       gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
   }
