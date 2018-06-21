@@ -6,7 +6,7 @@ import com.simulator.common.RoadId
 import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
 
 object Road {
-  def props(roadId: RoadId, startJunction: ActorRef, endJunction: ActorRef, length: Double): Props =
+  def props(roadId: RoadId, startJunction: JunctionRef, endJunction: JunctionRef, length: Double): Props =
     Props(new Road(roadId, startJunction, endJunction, length))
 
   case class EnterRoad(position: Double) // send by Car
@@ -27,8 +27,8 @@ object Road {
 }
 
 class Road(val roadId: RoadId,
-           val startJunction: ActorRef,
-           val endJunction: ActorRef,
+           val startJunction: JunctionRef,
+           val endJunction: JunctionRef,
            val length: Double) extends Actor {
 
   import Road._

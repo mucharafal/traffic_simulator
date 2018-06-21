@@ -16,7 +16,7 @@ object Car {
 
   case object GetState
   final case class GetStateResult(carId: CarId,
-                                  roadRef: RoadRef,
+                                  road: RoadRef,
                                   positionOnRoad: Double,
                                   velocity: Double,
                                   breaking: Boolean)

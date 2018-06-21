@@ -16,21 +16,24 @@ class SimulationServiceImpl(initialState: Snapshot)
 
   private var timeSynchronizer: TimeSynchronizerRef = _
   private var junctions: Map[JunctionId, JunctionRef] = Map.empty
-  private var roads: Seq[(RoadId, RoadRef)] = Seq.empty
+  private var roadIdToActor: Map[RoadId, RoadRef] = Map.empty
+  private var roadActorToId: Map[RoadRef, RoadId] = Map.empty
   private var cars: Seq[(CarId, CarRef)] = Seq.empty
 
-  private def createJunctionActor(junction: JunctionState): JunctionRef = {
-    val junctionActor = system.actorOf(
-      actor.Junction.props(junction.id),
-      f"junction-${ junction.id.value }")
+  private def createJunctionActor(junctionState: JunctionState): JunctionRef = {
+    val junction = system.actorOf(
+      actor.Junction.props(junctionState.id),
+      f"junction-${ junctionState.id.value }")
 
-    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junctionActor)
+    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junction)
 
-    junctionActor
+    junction
   }
 
   private def createRoadActor(road: RoadState): RoadRef = {
-    val (startActor, endActor) = (junctions(road.start), junctions(road.end))
+    val endActors = (junctions(road.start), junctions(road.end))
+
+    val (startActor, endActor) = endActors
 
     val length = Position.distance(
       initialState.junctions.find { _.id == road.start }.get.position,
@@ -39,15 +42,15 @@ class SimulationServiceImpl(initialState: Snapshot)
     val roadActor = system.actorOf(Road.props(road.id, startActor, endActor, 1.0),
       f"road-${ road.id.value }")
 
-    startActor ! actor.Junction.AddRoad(roadActor, actor.Junction.OutDirection)
-    endActor ! actor.Junction.AddRoad(roadActor, actor.Junction.InDirection)
-    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(roadActor)
+    startActor ! Junction.AddRoad(roadActor, Junction.OutDirection)
+    endActor ! Junction.AddRoad(roadActor, Junction.InDirection)
+    timeSynchronizer ! TimeSynchronizer.AddInfrastructure(roadActor)
 
     roadActor
   }
 
   private def createCarActor(car: CarState): CarRef = {
-    val roadActor = roads.find { _._1 == car.road }.get._2
+    val roadActor = roadIdToActor(car.road)
 
     val carActor = system.actorOf(
       actor.Car.props(car.id, roadActor, car.positionOnRoad),
@@ -67,10 +70,12 @@ class SimulationServiceImpl(initialState: Snapshot)
       }
       .toMap
 
-    roads = initialState.roads
+    val roads = initialState.roads
       .map { road =>
         road.id -> createRoadActor(road)
       }
+    roadIdToActor = roads.toMap
+    roadActorToId = roads.map { _.swap }.toMap
 
     cars = initialState.cars
       .map { car =>
@@ -90,16 +95,16 @@ class SimulationServiceImpl(initialState: Snapshot)
         ask(junctionActor, actor.Junction.GetState)
           .mapTo[actor.Junction.GetStateResult]
           .map { status =>
-            val greenLightRoadId = roads.collectFirst { case (roadId, road) if status.roadWithGreenLight.contains(road) => roadId }
+            val greenLightRoadId = status.roadWithGreenLight.map { roadActorToId(_) }
             initialState.junctions.find { _.id == status.junctionId }.get.copy(greenLightRoad = greenLightRoadId)
           }
       }
 
-      cars: Iterable[CarState] <- Future.traverse(cars) { case (carId, car) =>
+      cars: Iterable[CarState] <- Future.traverse(cars) { case (_, car) =>
         ask(car, Car.GetState)
           .mapTo[Car.GetStateResult]
           .map { status =>
-            val roadId = roads.find { _._2 == status.roadRef }.get._1
+            val roadId = roadActorToId(status.road)
             CarState(status.carId, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat, status.breaking)
           }
       }

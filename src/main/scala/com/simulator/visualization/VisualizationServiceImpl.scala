@@ -11,6 +11,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
 
   private val canvasPadding = 50
   private val roadLineWidth = 2
+  private val roadsDistance = 4
   private val carOvalSize = 10
   private val junctionOvalSize = 8
   private val carLabelOffset = -40
@@ -19,9 +20,9 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     val junctionMap: Map[JunctionId, JunctionState] = snapshot.junctions.keyBy { _.id }
     val roadMap: Map[RoadId, RoadState] = snapshot.roads.keyBy { _.id }
 
-    def getCarPosition(car: CarState): Position = {
+    def getCarPosition(car: CarState): Vec2D = {
       val road = roadMap(car.road)
-      Position.interpolate(junctionMap(road.start).position, junctionMap(road.end).position)(car.positionOnRoad)
+      (junctionMap(road.start).position interpolate junctionMap(road.end).position)(car.positionOnRoad)
     }
 
     val boundingBox = calculateBoundingBox(snapshot.junctions)
@@ -48,9 +49,9 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     ).reduce { _.createConcatenation(_) }
 
     // Map world position to screen position
-    def worldToScreen(pos: Position) = {
+    def worldToScreen(pos: Vec2D) = {
       val point = worldToScreenTransform.transform(pos.x, pos.y)
-      Position(point.getX.toFloat, point.getY.toFloat)
+      Vec2D(point.getX, point.getY)
     }
 
     val gc = canvas.graphicsContext2D
@@ -65,15 +66,18 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     for (road <- snapshot.roads) {
       val startJunction = junctionMap(road.start)
       val endJunction = junctionMap(road.end)
-      val start = worldToScreen(startJunction.position)
-      val end = worldToScreen(endJunction.position)
+      var start = worldToScreen(startJunction.position)
+      var end = worldToScreen(endJunction.position)
 
-      gc.stroke =
+      val offset = (end - start).normalized.rotated90DegreesCCW * (roadsDistance / 2)
+      start += offset
+      end += offset
+
+        gc.stroke =
         if (endJunction.greenLightRoad.contains(road.id))
           Color.Green
         else
           Color.Black
-
       gc.strokeLine(start.x, start.y, end.x, end.y)
     }
 
@@ -110,4 +114,6 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       bottom = ys.max
     )
   }
+
+  implicit def position2Vec2D(position: Position): Vec2D = Vec2D(position.x, position.y)
 }
