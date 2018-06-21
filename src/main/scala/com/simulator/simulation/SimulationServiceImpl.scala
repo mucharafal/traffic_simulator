@@ -5,6 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.simulator.common._
+import com.simulator.simulation.actor._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -13,12 +14,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class SimulationServiceImpl(initialState: Snapshot)
                            (implicit system: ActorSystem, ec: ExecutionContext) extends SimulationService {
 
-  private var timeSynchronizer: ActorRef = _
-  private var junctions: Map[JunctionId, ActorRef] = Map.empty
-  private var roads: Map[RoadId, ActorRef] = Map.empty
-  private var cars: Map[CarId, ActorRef] = Map.empty
+  private var timeSynchronizer: TimeSynchronizerRef = _
+  private var junctions: Map[JunctionId, JunctionRef] = Map.empty
+  private var roads: Map[RoadId, RoadRef] = Map.empty
+  private var cars: Map[CarId, CarRef] = Map.empty
 
-  private def createJunctionActor(junction: JunctionState): ActorRef = {
+  private def createJunctionActor(junction: JunctionState): JunctionRef = {
     val junctionActor = system.actorOf(
       actor.Junction.props(junction.id),
       f"junction-${ junction.id.value }")
@@ -28,7 +29,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     junctionActor
   }
 
-  private def createRoadActor(road: RoadState, reversed: Boolean): ActorRef = {
+  private def createRoadActor(road: RoadState, reversed: Boolean): RoadRef = {
     val endActors = (junctions(road.start), junctions(road.end))
 
     val (startActor, endActor) = if (reversed) endActors.swap else endActors
@@ -44,7 +45,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     roadActor
   }
 
-  private def createCarActor(car: CarState): ActorRef = {
+  private def createCarActor(car: CarState): CarRef = {
     val roadActor = roads(car.road)
 
     val carActor = system.actorOf(
@@ -79,6 +80,8 @@ class SimulationServiceImpl(initialState: Snapshot)
         car.id -> createCarActor(car)
       }
       .toMap
+
+    timeSynchronizer ! TimeSynchronizer.Start
 
     Future { Done }
   }

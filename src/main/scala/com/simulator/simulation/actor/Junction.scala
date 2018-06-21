@@ -17,9 +17,10 @@ object Junction {
   case object GetState
   final case class GetStateResult(junctionId: JunctionId,
                                   synchronizer: Int,
-                                  inRoads: List[ActorRef],
-                                  outRoads: List[ActorRef],
-                                  informationPackage: Any = ()) // TODO: don't use Any
+                                  inRoads: List[RoadRef],
+                                  outRoads: List[RoadRef],
+                                  roadWithGreenLight: Option[RoadRef],
+                                  timeToChange: Double)
 
   sealed trait Direction
   final object OutDirection extends Direction
@@ -30,17 +31,17 @@ object Junction {
 
 
 class Junction(val junctionId: JunctionId,
-               val greenLightTime: Int = 10) extends Actor {
+               val greenLightInterval: Int = 10) extends Actor {
 
   val log = Logging(context.system, this)
 
   var inRoads: List[ActorRef] = List.empty
   var outRoads: List[ActorRef] = List.empty
 
-  var greenLightRoadRef: ActorRef = null
-  var timeToChange: Int = greenLightTime
+  var timeToChange: Int = greenLightInterval
   var synchronizer: Int = -1
-  var roadIterator: Int = 0
+  var greenLightRoad: Option[ActorRef] = None
+  var greenLightRoadQueue: List[ActorRef] = List.empty
 
   override def preStart() {
     log.info("Started")
@@ -48,28 +49,36 @@ class Junction(val junctionId: JunctionId,
 
   override def receive = {
     case Junction.GetState =>
-      sender() ! Junction.GetStateResult(junctionId, synchronizer, inRoads, outRoads, (greenLightRoadRef, timeToChange))
+      sender ! Junction.GetStateResult(junctionId, synchronizer, inRoads, outRoads, greenLightRoad, timeToChange)
+
     case TimeSynchronizer.ComputeTimeSlot(s) =>
-      timeToChange match {
-        case 0 =>
-          timeToChange = greenLightTime
-          if (inRoads.nonEmpty) {
-            greenLightRoadRef = inRoads(roadIterator)
-            roadIterator = (roadIterator + 1) % inRoads.size
-          }
-        case _ =>
-          timeToChange -= 1
+      log.info("Computing time slot")
+
+      if (timeToChange == 0) {
+        timeToChange = greenLightInterval
+
+        if (greenLightRoadQueue.isEmpty) {
+          greenLightRoadQueue = inRoads
+        }
+
+        greenLightRoad = Some(greenLightRoadQueue.head)
+        greenLightRoadQueue = greenLightRoadQueue.tail
+
+        log.info(s"${ greenLightRoad.get.path } has green light")
       }
+
+      timeToChange -= 1
       synchronizer = s
-      sender() ! TimeSynchronizer.InfrastructureComputed
-    case Junction.AddRoad(roadRef, direction) =>
+      sender ! TimeSynchronizer.InfrastructureComputed
+
+    case Junction.AddRoad(road, direction) =>
       direction match {
         case InDirection =>
-          inRoads :+= roadRef
-          log.info(s"Added in road ${ roadRef.path }")
+          inRoads ::= road
+          log.info(s"Added in road ${ road.path }")
         case OutDirection =>
-          outRoads :+= roadRef
-          log.info(s"Added out road ${ roadRef.path }")
+          outRoads ::= road
+          log.info(s"Added out road ${ road.path }")
       }
   }
 }

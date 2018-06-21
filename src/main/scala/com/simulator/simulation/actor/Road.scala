@@ -40,22 +40,30 @@ class Road(val roadId: RoadId,
     log.info("Started")
   }
 
-  def receive = {
+  override def receive = {
     case GetNthCar(n) =>
       sender() ! NthCar(cars.lift(n - 1))
+
     case AddCar(ref, time, position) =>
       cars :+= ref
-      addedInTurn :+= (sender(), time, position)
+      addedInTurn :+= (sender, time, position)
       log.info(s"Add car ${ ref.path }")
+
     case RemoveCar(ref) =>
       cars = cars.filter(_ != ref)
+
     case GetEndJunction =>
       sender() ! GetEndJunctionResult(endJunction)
+
     case GetLength =>
       sender() ! GetLengthResult(length)
+
     case Movement(from, to) =>
       movementsInTurn :+= (sender(), from, to)
+
     case ComputeTimeSlot(s) =>
+      log.info("Computing time slot")
+
       synchronization = s
 
       addedInTurn = addedInTurn.sortBy(_._2)
@@ -73,7 +81,7 @@ class Road(val roadId: RoadId,
       }
 
       if (addedInTurn.nonEmpty) {
-        val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0)
+        val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0) // TODO
         movementsInTurn :+= (max._1, 0.0, max._3)
       }
 

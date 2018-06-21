@@ -8,7 +8,7 @@ import com.simulator.simulation.actor.Road._
 import com.simulator.simulation.actor.TimeSynchronizer.{CarComputed, ComputeTimeSlot}
 
 object Car {
-  type PositionOnRoad = (ActorRef, Double)
+  type PositionOnRoad = (RoadRef, Double)
 
   def props(carId: CarId,
             currentPosition: PositionOnRoad,
@@ -18,7 +18,7 @@ object Car {
 
   case object GetState
   final case class GetStateResult(carId: CarId,
-                                  roadRef: ActorRef,
+                                  roadRef: RoadRef,
                                   positionOnRoad: Double,
                                   velocity: Double,
                                   breaking: Boolean)
@@ -37,8 +37,8 @@ class Car(carId: CarId,
   var (roadId, position) = currentPosition
   val (destinationRoadId, destinationPosition) = destination
   //what to do in time slot
-  var roadToTurnOn: ActorRef = null
-  var nextJunction: ActorRef = null
+  var roadToTurnOn: RoadRef = null
+  var nextJunction: JunctionRef = null
   var acceleration: Double = 0
   var velocity: Double = 0
   var breaking: Boolean = false
@@ -57,7 +57,10 @@ class Car(carId: CarId,
   def receive = {
     case GetState =>
       sender() ! GetStateResult(carId, roadId, position, velocity, breaking)
-    case ComputeTimeSlot(s) => {
+
+    case ComputeTimeSlot(s) =>
+      log.info("Computing time slot")
+
       synchronizer = s
       if (!crashed) {
         if (!started) {
@@ -93,18 +96,19 @@ class Car(carId: CarId,
         }
       }
       sender() ! CarComputed
-    }
+
     case GetLengthResult(length) =>
       if (sender() == roadId) {
         currentRoadLength = length
       }
+
     case GetEndJunctionResult(junctionId) =>
       if (sender() == roadId) {
         nextJunction = junctionId
       }
-    case Crash => {
+
+    case Crash =>
       crashed = true
       velocity = 0
-    }
   }
 }
