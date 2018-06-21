@@ -39,7 +39,7 @@ class SimulationServiceImpl(initialState: Snapshot)
       initialState.junctions.find { _.id == road.start }.get.position,
       initialState.junctions.find { _.id == road.end }.get.position)
 
-    val roadActor = system.actorOf(Road.props(road.id, startActor, endActor, 1.0),
+    val roadActor = system.actorOf(Road.props(road.id, startActor, endActor, length),
       f"road-${ road.id.value }")
 
     startActor ! Junction.AddRoad(roadActor, Junction.OutDirection)

@@ -6,6 +6,7 @@ import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.paint.Color
 import scalafx.scene.text.TextAlignment
+import scalaz.Memo
 
 class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService {
 
@@ -17,9 +18,6 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
   private val carLabelOffset = 10
 
   override def visualize(snapshot: Snapshot): Unit = {
-    val junctionMap: Map[JunctionId, JunctionState] = snapshot.junctions.keyBy { _.id }
-    val roadMap: Map[RoadId, RoadState] = snapshot.roads.keyBy { _.id }
-
     val boundingBox = calculateBoundingBox(snapshot.junctions)
 
     val worldToScreenTransform = Seq(
@@ -43,15 +41,26 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       }
     ).reduce { _.createConcatenation(_) }
 
-    // Map world position to screen position
-    def worldToScreen(pos: Vec2D) = {
+    val junctions = snapshot.junctions.keyBy { _.id }
+    val roads = snapshot.roads.keyBy { _.id }
+    val cars = snapshot.cars.keyBy { _.id }
+
+    val worldToScreen: Vec2D => Vec2D = Memo.immutableHashMapMemo { pos =>
       val point = worldToScreenTransform.transform(pos.x, pos.y)
       Vec2D(point.getX, point.getY)
     }
 
-    def roadPosition(road: RoadState): (Vec2D, Vec2D) = {
-      val startJunction = junctionMap(road.start)
-      val endJunction = junctionMap(road.end)
+    val roadLength: RoadId => Double = Memo.immutableHashMapMemo { roadId =>
+      val road = roads(roadId)
+      val startJunction = junctions(road.start)
+      val endJunction = junctions(road.end)
+      (endJunction.position - startJunction.position).length
+    }
+
+    val roadPosition: RoadId => (Vec2D, Vec2D) = Memo.immutableHashMapMemo { roadId =>
+      val road = roads(roadId)
+      val startJunction = junctions(road.start)
+      val endJunction = junctions(road.end)
       val startPosition = worldToScreen(startJunction.position)
       val endPosition = worldToScreen(endJunction.position)
       val direction = (endPosition - startPosition).normalized
@@ -61,10 +70,10 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
         endPosition + offset - direction * junctionOvalSize)
     }
 
-    def carPosition(car: CarState): Vec2D = {
-      val road = roadMap(car.road)
-      val (roadStart, roadEnd) = roadPosition(road)
-      (roadStart interpolate roadEnd) (car.positionOnRoad)
+    val carPosition: CarId => Vec2D = Memo.immutableHashMapMemo { carId =>
+      val car = cars(carId)
+      val (roadStart, roadEnd) = roadPosition(car.road)
+      (roadStart interpolate roadEnd) (car.positionOnRoad / roadLength(car.road))
     }
 
     val gc = canvas.graphicsContext2D
@@ -76,10 +85,10 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
 
     // roads
     gc.lineWidth = roadLineWidth
-    for (road <- snapshot.roads) {
-      val (startPosition, endPosition) = roadPosition(road)
+    for (road <- roads.values) {
+      val (startPosition, endPosition) = roadPosition(road.id)
       val midPosition = (startPosition interpolate endPosition) (0.8)
-      val endJunction = junctionMap(road.end)
+      val endJunction = junctions(road.end)
 
       gc.stroke = Color.Black
       gc.strokeLine(startPosition.x, startPosition.y, midPosition.x, midPosition.y)
@@ -102,14 +111,14 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     // cars
     gc.fill = Color.Red
     for (car <- snapshot.cars) {
-      val pos = carPosition(car)
+      val pos = carPosition(car.id)
       gc.fillOval(pos.x - carOvalSize / 2, pos.y - carOvalSize / 2, carOvalSize, carOvalSize)
     }
 
     gc.fill = Color.Red
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
-      val pos = carPosition(car)
+      val pos = carPosition(car.id)
       val text = f"car #${ car.id.value }"
       gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
