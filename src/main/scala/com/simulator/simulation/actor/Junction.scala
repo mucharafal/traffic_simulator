@@ -14,6 +14,9 @@ object Junction {
 
   def props(junctionId: JunctionId): Props = Props(new Junction(junctionId))
 
+  case class GetRoadLight(road: RoadRef)
+  case class GetRoadLightResult(road: RoadRef, hasGreenLight: Boolean)
+
   case object GetState
   final case class GetStateResult(junctionId: JunctionId,
                                   synchronizer: Int,
@@ -50,6 +53,9 @@ class Junction(val junctionId: JunctionId,
   override def receive = {
     case Junction.GetState =>
       sender ! Junction.GetStateResult(junctionId, synchronizer, inRoads, outRoads, greenLightRoad, timeToChange)
+
+    case Junction.GetRoadLight(road) =>
+      sender ! Junction.GetRoadLightResult(road, greenLightRoad.contains(road))
 
     case TimeSynchronizer.ComputeTimeSlot(s) =>
       log.info("Computing time slot")

@@ -1,20 +1,13 @@
 package com.simulator.simulation.actor
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, Props}
 import akka.event.Logging
 import com.simulator.common.CarId
-import com.simulator.simulation.actor.Car.PositionOnRoad
 import com.simulator.simulation.actor.Road._
-import com.simulator.simulation.actor.TimeSynchronizer.{CarComputed, ComputeTimeSlot}
 
 object Car {
-  type PositionOnRoad = (RoadRef, Double)
-
-  def props(carId: CarId,
-            currentPosition: PositionOnRoad,
-            destinationPosition: PositionOnRoad,
-            driveAlgorithm: Any): Props = // TODO: proper type
-    Props(new Car(carId, currentPosition, destinationPosition, driveAlgorithm))
+  def props(carId: CarId, road: RoadRef, positionOnRoad: Double): Props =
+    Props(new Car(carId, road, positionOnRoad))
 
   case object GetState
   final case class GetStateResult(carId: CarId,
@@ -25,17 +18,12 @@ object Car {
   case object Crash
 }
 
-class Car(carId: CarId,
-          currentPosition: PositionOnRoad,
-          destination: PositionOnRoad,
-          val driveAlgorithm: Any) extends Actor {
-
-  import Car._
+class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends Actor {
 
   val log = Logging(context.system, this)
 
-  var (roadId, position) = currentPosition
-  val (destinationRoadId, destinationPosition) = destination
+  var road = initialRoad
+  var position = initialPosition
   //what to do in time slot
   var roadToTurnOn: RoadRef = null
   var nextJunction: JunctionRef = null
@@ -47,18 +35,18 @@ class Car(carId: CarId,
   var crashed: Boolean = false
   var crashedCounter: Int = 10
   var started: Boolean = false
-  roadId ! GetLength
-  roadId ! GetEndJunction
+  road ! GetLength
+  road ! GetEndJunction
 
   override def preStart() {
     log.info("Started")
   }
 
   def receive = {
-    case GetState =>
-      sender() ! GetStateResult(carId, roadId, position, velocity, breaking)
+    case Car.GetState =>
+      sender() ! Car.GetStateResult(carId, road, position, velocity, breaking)
 
-    case ComputeTimeSlot(s) =>
+    case TimeSynchronizer.ComputeTimeSlot(s) =>
       log.info("Computing time slot")
 
       synchronizer = s
@@ -70,18 +58,12 @@ class Car(carId: CarId,
             //nextJunction ! Turning(roadId, roadToTurnOn) TODO
             position = newPosition - currentRoadLength
             roadToTurnOn ! AddCar(self, distance / position, position)
-            roadId ! RemoveCar(self)
-            roadId = roadToTurnOn
-            roadId ! GetLength
-            roadId ! GetEndJunction
+            road ! RemoveCar(self)
+            road = roadToTurnOn
+            road ! GetLength
+            road ! GetEndJunction
           } else {
-            if (roadId == destinationRoadId &&
-              newPosition > destinationPosition) {
-              roadId ! RemoveCar(self) //end of journey
-              context stop self
-            }
-
-            roadId ! Movement(position, newPosition)
+            road ! Movement(position, newPosition)
             position = newPosition
           }
           velocity += acceleration / 2
@@ -91,23 +73,21 @@ class Car(carId: CarId,
       } else {
         crashedCounter -= 1
         if (crashedCounter == 0) {
-          roadId ! RemoveCar(self)
+          road ! RemoveCar(self)
           context stop self
         }
       }
-      sender() ! CarComputed
+      sender ! TimeSynchronizer.CarComputed
 
-    case GetLengthResult(length) =>
-      if (sender() == roadId) {
-        currentRoadLength = length
-      }
+    case Road.GetLengthResult(length) =>
+      assert(sender == road)
+      currentRoadLength = length
 
-    case GetEndJunctionResult(junctionId) =>
-      if (sender() == roadId) {
-        nextJunction = junctionId
-      }
+    case Road.GetEndJunctionResult(endJunction) =>
+      assert(sender == road)
+      nextJunction = endJunction
 
-    case Crash =>
+    case Car.Crash =>
       crashed = true
       velocity = 0
   }

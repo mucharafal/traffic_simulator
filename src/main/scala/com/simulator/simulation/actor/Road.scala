@@ -18,6 +18,9 @@ object Road {
   final case class GetLengthResult(length: Double)
   final case class GetEndJunctionResult(endJunction: ActorRef)
   final case class Movement(from: Double, to: Double)
+
+  case object GetCars
+  case class GetCarsResult(cars: List[CarRef])
 }
 
 class Road(val roadId: RoadId,
@@ -33,8 +36,8 @@ class Road(val roadId: RoadId,
   var cars = List.empty[ActorRef]
   var synchronization: Int = -1
 
-  var movementsInTurn = List.empty[(ActorRef, Double, Double)]
-  var addedInTurn = List.empty[(ActorRef, Double, Double)]
+  var movementsInTurn = List.empty[(CarRef, Double, Double)]
+  var addedInTurn = List.empty[(CarRef, Double, Double)]
 
   override def preStart() {
     log.info("Started")
@@ -44,10 +47,10 @@ class Road(val roadId: RoadId,
     case GetNthCar(n) =>
       sender() ! NthCar(cars.lift(n - 1))
 
-    case AddCar(ref, time, position) =>
-      cars :+= ref
-      addedInTurn :+= (sender, time, position)
-      log.info(s"Add car ${ ref.path }")
+    case AddCar(car, time, position) =>
+      cars :+= car
+      addedInTurn :+= (car, time, position)
+      log.info(s"Add car ${ car.path }")
 
     case RemoveCar(ref) =>
       cars = cars.filter(_ != ref)
