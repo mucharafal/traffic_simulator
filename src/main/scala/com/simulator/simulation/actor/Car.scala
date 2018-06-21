@@ -4,6 +4,7 @@ import akka.actor.{Actor, Props}
 import akka.event.Logging
 import com.simulator.common.CarId
 import com.simulator.simulation.actor.Road._
+import akka.pattern.ask
 
 object Car {
   def props(carId: CarId, road: RoadRef, positionOnRoad: Double): Props =
@@ -30,11 +31,11 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
   var acceleration: Double = 0
   var velocity: Double = 0
   var breaking: Boolean = false
-  var synchronizer: Int = -1
   var currentRoadLength: Double = 1000000
   var crashed: Boolean = false
   var crashedCounter: Int = 10
   var started: Boolean = false
+
   road ! GetLength
   road ! GetEndJunction
 
@@ -46,38 +47,43 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
     case Car.GetState =>
       sender() ! Car.GetStateResult(carId, road, position, velocity, breaking)
 
-    case TimeSynchronizer.ComputeTimeSlot(s) =>
+    case TimeSynchronizer.ComputeTimeSlot(_) =>
       log.info("Computing time slot")
 
-      synchronizer = s
-      if (!crashed) {
-        if (!started) {
-          val distance = velocity + acceleration / 2
-          val newPosition = position + distance
-          if (newPosition - currentRoadLength > 0) {
-            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
-            position = newPosition - currentRoadLength
-            roadToTurnOn ! AddCar(self, distance / position, position)
-            road ! RemoveCar(self)
-            road = roadToTurnOn
-            road ! GetLength
-            road ! GetEndJunction
-          } else {
-            road ! Movement(position, newPosition)
-            position = newPosition
-          }
-          velocity += acceleration / 2
-        } else {
-          //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
-        }
-      } else {
-        crashedCounter -= 1
-        if (crashedCounter == 0) {
-          road ! RemoveCar(self)
-          context stop self
-        }
-      }
+
+
+//      if (!crashed) {
+//        if (!started) {
+//          val distance = velocity + acceleration / 2
+//          val newPosition = position + distance
+//          if (newPosition - currentRoadLength > 0) {
+//            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
+//            position = newPosition - currentRoadLength
+//            roadToTurnOn ! AddCar(self, distance / position, position)
+//            road ! RemoveCar(self)
+//            road = roadToTurnOn
+//            road ! GetLength
+//            road ! GetEndJunction
+//          } else {
+//            road ! Movement(position, newPosition)
+//            position = newPosition
+//          }
+//          velocity += acceleration / 2
+//        } else {
+//          //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
+//        }
+//      } else {
+//        crashedCounter -= 1
+//        if (crashedCounter == 0) {
+//          road ! RemoveCar(self)
+//          context stop self
+//        }
+//      }
+
+      position += 0.01
+
       sender ! TimeSynchronizer.CarComputed
+
 
     case Road.GetLengthResult(length) =>
       assert(sender == road)

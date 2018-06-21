@@ -3,10 +3,8 @@ package com.simulator.simulation.actor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 
-import scala.collection.immutable.Seq
-
 object TimeSynchronizer {
-  def props(): Props = Props(new TimeSynchronizer(Seq.empty, Seq.empty))
+  def props(): Props = Props(new TimeSynchronizer())
 
   final case class ComputeTimeSlot(n: Int) //computation in time slot ended
   final case class AddCar(id: CarRef)
@@ -15,60 +13,69 @@ object TimeSynchronizer {
   final case class RemoveInfrastructure(id: ActorRef)
   case object CarComputed
   case object InfrastructureComputed
-  case object Start
+
+  case object NextTimeSlot
+  case object TimeSlotComputed
 }
 
-class TimeSynchronizer(var cars: Seq[CarRef], var infrastructure: Seq[ActorRef]) extends Actor {
-
-  import TimeSynchronizer._
+class TimeSynchronizer extends Actor {
 
   val log = Logging(context.system, this)
 
-  var sentMessagesCounter = 0 //number of sending turns since start synchronizer
-  //using to synchronize turns
-  var receivedMessagesFromCarsCounter = 0
-  var receivedMessagesFromInfrastructureCounter = 0
+  var cars: Set[CarRef] = Set.empty
+  var infrastructure: Set[ActorRef] = Set.empty // junctions and roads
 
-  var started: Boolean = false
+  var waitingCars: Set[CarRef] = Set.empty
+  var waitingInfrastructure: Set[ActorRef] = Set.empty
+
+  var timeSlot = 0
+
+  var nextTimeSlotSender: ActorRef = _
 
   def receive = {
-    case CarComputed =>
-      started = true
-      require(cars.contains(sender))
-      receivedMessagesFromCarsCounter += 1
-      if (receivedMessagesFromCarsCounter == cars.size) {
-        receivedMessagesFromCarsCounter = 0
-        infrastructure.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
+    case TimeSynchronizer.NextTimeSlot =>
+      log.info("Next time slot")
+      require(waitingCars.isEmpty)
+      require(waitingInfrastructure.isEmpty)
+
+      nextTimeSlotSender = sender
+      waitingCars = cars
+      waitingCars.foreach { _ ! TimeSynchronizer.ComputeTimeSlot(timeSlot) }
+
+    case TimeSynchronizer.CarComputed =>
+      log.info(s"${sender.path} computed")
+      require(waitingCars.contains(sender))
+      require(waitingInfrastructure.isEmpty)
+      waitingCars -= sender
+
+      if (waitingCars.isEmpty) {
+        waitingInfrastructure = infrastructure
+        waitingInfrastructure.foreach { _ ! TimeSynchronizer.ComputeTimeSlot(timeSlot) }
       }
 
-    case InfrastructureComputed =>
-      val infrastructureRef = sender()
-      if (infrastructure.contains(infrastructureRef) && infrastructure.nonEmpty) {
-        receivedMessagesFromInfrastructureCounter += 1
-        if (receivedMessagesFromInfrastructureCounter == infrastructure.size) {
-          receivedMessagesFromInfrastructureCounter = 0
-          sentMessagesCounter += 1
-          sentMessagesCounter %= 1000000
-          cars.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
-        }
+    case TimeSynchronizer.InfrastructureComputed =>
+      log.info(s"${sender.path} computed")
+      require(waitingCars.isEmpty, sender.path)
+      require(waitingInfrastructure.contains(sender))
+      waitingInfrastructure -= sender
+
+      if (waitingInfrastructure.isEmpty) {
+        timeSlot += 1
+        nextTimeSlotSender ! TimeSynchronizer.TimeSlotComputed
       }
 
-    case AddCar(id) =>
-      cars :+= id
-      log.info(s"Added object ${ id.path }")
+    case TimeSynchronizer.AddCar(car) =>
+      cars += car
+      log.info(s"Added car ${ car.path }")
 
-    case RemoveCar(id) =>
-      cars = cars.filter(_ != id)
+    case TimeSynchronizer.RemoveCar(car) =>
+      cars -= car
 
-    case AddInfrastructure(id) =>
-      infrastructure :+= id
+    case TimeSynchronizer.AddInfrastructure(car) =>
+      infrastructure += car
 
-    case RemoveInfrastructure(id) =>
-      infrastructure = infrastructure.filter(_ != id)
-
-    case Start =>
-      if (!started) {
-        cars.foreach(_ ! ComputeTimeSlot(sentMessagesCounter))
-      }
+    case TimeSynchronizer.RemoveInfrastructure(car) =>
+      infrastructure -= car
   }
+
 }

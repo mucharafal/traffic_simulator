@@ -67,37 +67,39 @@ class Road(val roadId: RoadId,
     case ComputeTimeSlot(s) =>
       log.info("Computing time slot")
 
-      synchronization = s
+      sender ! TimeSynchronizer.InfrastructureComputed
 
-      addedInTurn = addedInTurn.sortBy(_._2)
-      var maxPosition: Double = 0.0
-      for (i <- 1 until movementsInTurn.size) {
-        val carA = movementsInTurn(i - 1)
-        val carB = movementsInTurn(i)
-
-        if (carA._3 > carB._3) {
-          carA._1 ! Crash
-          carB._1 ! Crash
-        }
-
-        maxPosition = math.max(math.max(carA._3, carB._3), maxPosition)
-      }
-
-      if (addedInTurn.nonEmpty) {
-        val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0) // TODO
-        movementsInTurn :+= (max._1, 0.0, max._3)
-      }
-
-      movementsInTurn = movementsInTurn.sortBy(_._2)
-      for (i <- 1 until movementsInTurn.size) {
-        val carA = movementsInTurn(i - 1)
-        val carB = movementsInTurn(i)
-
-        if (carA._3 > carB._3) {
-          carA._1 ! Crash
-          carB._1 ! Crash
-        }
-      }
+//      synchronization = s
+//
+//      addedInTurn = addedInTurn.sortBy(_._2)
+//      var maxPosition: Double = 0.0
+//      for (i <- 1 until movementsInTurn.size) {
+//        val carA = movementsInTurn(i - 1)
+//        val carB = movementsInTurn(i)
+//
+//        if (carA._3 > carB._3) {
+//          carA._1 ! Crash
+//          carB._1 ! Crash
+//        }
+//
+//        maxPosition = math.max(math.max(carA._3, carB._3), maxPosition)
+//      }
+//
+//      if (addedInTurn.nonEmpty) {
+//        val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0) // TODO
+//        movementsInTurn :+= (max._1, 0.0, max._3)
+//      }
+//
+//      movementsInTurn = movementsInTurn.sortBy(_._2)
+//      for (i <- 1 until movementsInTurn.size) {
+//        val carA = movementsInTurn(i - 1)
+//        val carB = movementsInTurn(i)
+//
+//        if (carA._3 > carB._3) {
+//          carA._1 ! Crash
+//          carB._1 ! Crash
+//        }
+//      }
 
   }
 }

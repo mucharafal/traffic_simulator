@@ -1,7 +1,7 @@
 package com.simulator.simulation
 
 import akka.Done
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 import com.simulator.common._
@@ -40,7 +40,7 @@ class SimulationServiceImpl(initialState: Snapshot)
 
     startActor ! actor.Junction.AddRoad(roadActor, actor.Junction.OutDirection)
     endActor ! actor.Junction.AddRoad(roadActor, actor.Junction.InDirection)
-    timeSynchronizer ! actor.TimeSynchronizer.AddCar(roadActor)
+    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(roadActor)
 
     roadActor
   }
@@ -53,6 +53,7 @@ class SimulationServiceImpl(initialState: Snapshot)
       f"car-${ car.id.value }")
 
     roadActor ! actor.Road.AddCar(carActor, 0.0, car.positionOnRoad)
+    timeSynchronizer ! actor.TimeSynchronizer.AddCar(carActor)
 
     carActor
   }
@@ -81,8 +82,6 @@ class SimulationServiceImpl(initialState: Snapshot)
       }
       .toMap
 
-    timeSynchronizer ! TimeSynchronizer.Start
-
     Future { Done }
   }
 
@@ -90,6 +89,8 @@ class SimulationServiceImpl(initialState: Snapshot)
     implicit val timeout: Timeout = 1 second
 
     for {
+      _ <- ask(timeSynchronizer, TimeSynchronizer.NextTimeSlot).mapTo[TimeSynchronizer.TimeSlotComputed.type]
+
       junctions: Iterable[JunctionState] <- Future.traverse(junctions.values) { junctionActor =>
         ask(junctionActor, actor.Junction.GetState)
           .mapTo[actor.Junction.GetStateResult]

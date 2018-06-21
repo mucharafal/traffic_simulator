@@ -43,8 +43,8 @@ object App extends JFXApp {
   private val simulationService: SimulationService = new SimulationServiceImpl(initialSnapshot)
   Await.ready(simulationService.initialize(), 2 second)
 
-  system.scheduler.schedule(initialDelay = 0 seconds, interval = 100 milli) {
-    val snapshot = Await.result(simulationService.simulateTimeSlot(), 50 milli)
+  system.scheduler.schedule(initialDelay = 1 seconds, interval = 1000 milli) {
+    val snapshot = Await.result(simulationService.simulateTimeSlot(), 500 milli)
     visualizationService.visualize(snapshot)
   }
 
