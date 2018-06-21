@@ -16,9 +16,10 @@ object Car {
             driveAlgorithm: Any): Props = // TODO: proper type
     Props(new Car(carId, currentPosition, destinationPosition, driveAlgorithm))
 
-  case object GetStatus  //Get information about position, velocity, breaking signal and number of timeslot
-  final case class GetStatusResult(roadId: ActorRef,
-                                   position_x: Double,
+  case object GetStatus //Get information about position, velocity, breaking signal and number of timeslot
+  final case class GetStatusResult(carId: CarId,
+                                   roadRef: ActorRef,
+                                   positionOnRoad: Double,
                                    velocity: Double,
                                    breaking: Boolean)
   case object Crash
@@ -55,11 +56,11 @@ class Car(carId: CarId,
 
   def receive = {
     case GetStatus =>
-      sender() ! GetStatusResult(roadId, position, velocity, breaking)
+      sender() ! GetStatusResult(carId, roadId, position, velocity, breaking)
     case ComputeTimeSlot(s) => {
       synchronizer = s
-      if(!crashed) {
-        if(!started) {
+      if (!crashed) {
+        if (!started) {
           val distance = velocity + acceleration / 2
           val newPosition = position + distance
           if (newPosition - currentRoadLength > 0) {
@@ -73,7 +74,7 @@ class Car(carId: CarId,
           } else {
             if (roadId == destinationRoadId &&
               newPosition > destinationPosition) {
-              roadId ! RemoveCar(self)    //end of journey
+              roadId ! RemoveCar(self) //end of journey
               context stop self
             }
 
@@ -81,21 +82,12 @@ class Car(carId: CarId,
             position = newPosition
           }
           velocity += acceleration / 2
-//          driveAlgorithm(roadId,
-//            nextJunction,
-//            position,
-//            velocity) match {
-//            case (newRoad: ActorRef, newAcc: Double) =>
-//              roadToTurnOn = newRoad
-//              acceleration = newAcc
-//            case _ => 2
-//          } // TODO
         } else {
           //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
         }
       } else {
         crashedCounter -= 1
-        if(crashedCounter == 0){
+        if (crashedCounter == 0) {
           roadId ! RemoveCar(self)
           context stop self
         }
@@ -103,11 +95,11 @@ class Car(carId: CarId,
       sender() ! CarComputed
     }
     case GetLengthResult(length) =>
-      if(sender() == roadId){
+      if (sender() == roadId) {
         currentRoadLength = length
       }
     case GetEndJunctionResult(junctionId) =>
-      if(sender() == roadId){
+      if (sender() == roadId) {
         nextJunction = junctionId
       }
     case Crash => {

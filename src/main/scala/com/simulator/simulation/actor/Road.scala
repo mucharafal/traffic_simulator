@@ -2,11 +2,12 @@ package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
+import com.simulator.common.RoadId
 import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
 
 object Road {
-  def props(startJunction: ActorRef, endJunction: ActorRef, length: Double): Props =
-    Props(new Road(startJunction, endJunction, length))
+  def props(roadId: RoadId, startJunction: ActorRef, endJunction: ActorRef, length: Double): Props =
+    Props(new Road(roadId, startJunction, endJunction, length))
 
   final case class GetNthCar(n: Int)
   final case class AddCar(car: ActorRef, time: Double, to: Double)
@@ -19,12 +20,13 @@ object Road {
   final case class Movement(from: Double, to: Double)
 }
 
-class Road(val startJunction: ActorRef,
+class Road(val roadId: RoadId,
+           val startJunction: ActorRef,
            val endJunction: ActorRef,
            val length: Double) extends Actor {
 
-  import Road._
   import Car._
+  import Road._
 
   val log = Logging(context.system, this)
 
@@ -44,7 +46,7 @@ class Road(val startJunction: ActorRef,
     case AddCar(ref, time, position) =>
       cars :+= ref
       addedInTurn :+= (sender(), time, position)
-      log.info(s"Add car ${ref.path}")
+      log.info(s"Add car ${ ref.path }")
     case RemoveCar(ref) =>
       cars = cars.filter(_ != ref)
     case GetEndJunction =>
@@ -56,13 +58,13 @@ class Road(val startJunction: ActorRef,
     case ComputeTimeSlot(s) =>
       synchronization = s
 
-      addedInTurn.sortBy(_._2)
+      addedInTurn = addedInTurn.sortBy(_._2)
       var maxPosition: Double = 0.0
-      for(i <- 1 to (movementsInTurn.size-1)){
-        val carA = movementsInTurn(i-1)
+      for (i <- 1 until movementsInTurn.size) {
+        val carA = movementsInTurn(i - 1)
         val carB = movementsInTurn(i)
 
-        if(carA._3 > carB._3) {
+        if (carA._3 > carB._3) {
           carA._1 ! Crash
           carB._1 ! Crash
         }
@@ -70,17 +72,17 @@ class Road(val startJunction: ActorRef,
         maxPosition = math.max(math.max(carA._3, carB._3), maxPosition)
       }
 
-      if(!addedInTurn.isEmpty){
+      if (addedInTurn.nonEmpty) {
         val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0)
         movementsInTurn :+= (max._1, 0.0, max._3)
       }
 
-      movementsInTurn.sortBy(_._2)
-      for(i <- 1 to (movementsInTurn.size-1)){
-        val carA = movementsInTurn(i-1)
+      movementsInTurn = movementsInTurn.sortBy(_._2)
+      for (i <- 1 until movementsInTurn.size) {
+        val carA = movementsInTurn(i - 1)
         val carB = movementsInTurn(i)
 
-        if(carA._3 > carB._3) {
+        if (carA._3 > carB._3) {
           carA._1 ! Crash
           carB._1 ! Crash
         }

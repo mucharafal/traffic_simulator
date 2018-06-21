@@ -21,7 +21,7 @@ class SimulationServiceImpl(initialState: Snapshot)
 
   private def createJunctionActor(junction: Junction): ActorRef = {
     val junctionActor = system.actorOf(
-      actor.Junction.props(JunctionTypes.signalizationJunction),
+      actor.Junction.props(),
       f"junction-${ junction.id.value }")
 
     timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junctionActor)
@@ -35,7 +35,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     val (startActor, endActor) = if (reversed) endActors.swap else endActors
     val suffix = if (reversed) "B" else "A"
 
-    val roadActor = system.actorOf(actor.Road.props(startActor, endActor, 5.0),
+    val roadActor = system.actorOf(actor.Road.props(road.id, startActor, endActor, 5.0),
       f"road-${ road.id.value }$suffix")
 
     startActor ! actor.Junction.AddRoad(roadActor, actor.Junction.OutDirection)
@@ -102,8 +102,8 @@ class SimulationServiceImpl(initialState: Snapshot)
           ask(carActor, actor.Car.GetStatus)
             .mapTo[actor.Car.GetStatusResult]
             .map { status =>
-              val roadId = roads.find { _._2 == status.roadId }.get._1
-              Car(id, roadId, status.position_x.toFloat, status.velocity.toFloat, status.breaking)
+              val roadId = roads.find { _._2 == status.roadRef }.get._1
+              Car(id, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat, status.breaking)
             }
       }
     } yield {
