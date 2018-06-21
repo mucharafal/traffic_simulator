@@ -24,7 +24,7 @@ class SimulationServiceImpl(initialState: Snapshot)
       actor.Junction.props(JunctionTypes.signalizationJunction),
       f"junction-${ junction.id.value }")
 
-    timeSynchronizer ! actor.TimeSynchronizer.AddObject(junctionActor)
+    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junctionActor)
 
     junctionActor
   }
@@ -40,7 +40,7 @@ class SimulationServiceImpl(initialState: Snapshot)
 
     startActor ! actor.Junction.AddRoad(roadActor, actor.Junction.OutDirection)
     endActor ! actor.Junction.AddRoad(roadActor, actor.Junction.InDirection)
-    timeSynchronizer ! actor.TimeSynchronizer.AddObject(roadActor)
+    timeSynchronizer ! actor.TimeSynchronizer.AddCar(roadActor)
 
     roadActor
   }
@@ -52,7 +52,7 @@ class SimulationServiceImpl(initialState: Snapshot)
       actor.Car.props(car.id, (roadActor, car.positionOnRoad), (roadActor, 1.0), null),
       f"car-${ car.id.value }")
 
-    roadActor ! actor.Road.AddCar(carActor, car.positionOnRoad)
+    roadActor ! actor.Road.AddCar(carActor, 0.0, car.positionOnRoad)
 
     carActor
   }

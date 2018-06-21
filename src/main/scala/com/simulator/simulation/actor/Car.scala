@@ -5,7 +5,7 @@ import akka.event.Logging
 import com.simulator.common.CarId
 import com.simulator.simulation.actor.Car.PositionOnRoad
 import com.simulator.simulation.actor.Road._
-import com.simulator.simulation.actor.TimeSynchronizer.ComputeTimeSlot
+import com.simulator.simulation.actor.TimeSynchronizer.{CarComputed, ComputeTimeSlot}
 
 object Car {
   type PositionOnRoad = (ActorRef, Double)
@@ -26,15 +26,15 @@ object Car {
 
 class Car(carId: CarId,
           currentPosition: PositionOnRoad,
-          destinationPosition: PositionOnRoad,
+          destination: PositionOnRoad,
           val driveAlgorithm: Any) extends Actor {
 
   import Car._
 
   val log = Logging(context.system, this)
 
-  var (roadId, positionX) = currentPosition
-  val (destinationRoadId, destinationPositionX) = destinationPosition
+  var (roadId, position) = currentPosition
+  val (destinationRoadId, destinationPosition) = destination
   //what to do in time slot
   var roadToTurnOn: ActorRef = null
   var nextJunction: ActorRef = null
@@ -55,33 +55,35 @@ class Car(carId: CarId,
 
   def receive = {
     case GetStatus =>
-      sender() ! GetStatusResult(roadId, positionX, velocity, breaking)
+      sender() ! GetStatusResult(roadId, position, velocity, breaking)
     case ComputeTimeSlot(s) => {
+      synchronizer = s
       if(!crashed) {
         if(!started) {
-          val newPosition = positionX + velocity + acceleration / 2
+          val distance = velocity + acceleration / 2
+          val newPosition = position + distance
           if (newPosition - currentRoadLength > 0) {
             //nextJunction ! Turning(roadId, roadToTurnOn) TODO
-            positionX = newPosition - currentRoadLength
-            roadToTurnOn ! AddCar(self, positionX)
+            position = newPosition - currentRoadLength
+            roadToTurnOn ! AddCar(self, distance / position, position)
             roadId ! RemoveCar(self)
             roadId = roadToTurnOn
             roadId ! GetLength
             roadId ! GetEndJunction
           } else {
             if (roadId == destinationRoadId &&
-              newPosition > destinationPositionX) {
-              roadId ! RemoveCar(self)
+              newPosition > destinationPosition) {
+              roadId ! RemoveCar(self)    //end of journey
               context stop self
             }
 
-            roadId ! Movement(positionX, newPosition)
-            positionX = newPosition
+            roadId ! Movement(position, newPosition)
+            position = newPosition
           }
           velocity += acceleration / 2
 //          driveAlgorithm(roadId,
 //            nextJunction,
-//            positionX,
+//            position,
 //            velocity) match {
 //            case (newRoad: ActorRef, newAcc: Double) =>
 //              roadToTurnOn = newRoad
@@ -98,6 +100,7 @@ class Car(carId: CarId,
           context stop self
         }
       }
+      sender() ! CarComputed
     }
     case GetLengthResult(length) =>
       if(sender() == roadId){
