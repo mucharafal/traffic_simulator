@@ -9,18 +9,21 @@ object Road {
   def props(roadId: RoadId, startJunction: ActorRef, endJunction: ActorRef, length: Double): Props =
     Props(new Road(roadId, startJunction, endJunction, length))
 
-  final case class GetNthCar(n: Int)
-  final case class AddCar(car: ActorRef, time: Double, to: Double)
-  final case class RemoveCar(car: ActorRef)
-  final case class NthCar(car: Option[ActorRef])
-  case object GetEndJunction
-  case object GetLength
-  final case class GetLengthResult(length: Double)
-  final case class GetEndJunctionResult(endJunction: ActorRef)
-  final case class Movement(from: Double, to: Double)
+  case class EnterRoad(position: Double) // send by Car
+  case object LeaveRoad // send by Car
 
-  case object GetCars
-  case class GetCarsResult(cars: List[CarRef])
+//  final case class GetNthCar(n: Int)
+//  final case class AddCar(car: ActorRef, time: Double, to: Double)
+//  final case class RemoveCar(car: ActorRef)
+//  final case class NthCar(car: Option[ActorRef])
+//  case object GetEndJunction
+//  case object GetLength
+//  final case class GetLengthResult(length: Double)
+//  final case class GetEndJunctionResult(endJunction: ActorRef)
+//  final case class Movement(from: Double, to: Double)
+
+  case object GetCarAheadOfMe
+  case class GetCarAheadOfMeResult(car: Option[CarRef])
 }
 
 class Road(val roadId: RoadId,
@@ -28,46 +31,52 @@ class Road(val roadId: RoadId,
            val endJunction: ActorRef,
            val length: Double) extends Actor {
 
-  import Car._
   import Road._
 
   val log = Logging(context.system, this)
 
-  var cars = List.empty[ActorRef]
-  var synchronization: Int = -1
-
-  var movementsInTurn = List.empty[(CarRef, Double, Double)]
-  var addedInTurn = List.empty[(CarRef, Double, Double)]
+  var cars = Seq.empty[(ActorRef, Double)]
 
   override def preStart() {
     log.info("Started")
   }
 
   override def receive = {
-    case GetNthCar(n) =>
-      sender() ! NthCar(cars.lift(n - 1))
+    case EnterRoad(position) =>
+      val car = sender
+      val carAhead = cars.headOption.map { _._1 }
+      cars :+= (car, position)
+      cars = cars.sortBy { _._2 }
+      car ! Car.EnteredRoad(position, length, carAhead, endJunction)
 
-    case AddCar(car, time, position) =>
-      cars :+= car
-      addedInTurn :+= (car, time, position)
-      log.info(s"Add car ${ car.path }")
+    case LeaveRoad =>
+      cars = cars.filter { _._1 != sender }
 
-    case RemoveCar(ref) =>
-      cars = cars.filter(_ != ref)
-
-    case GetEndJunction =>
-      sender() ! GetEndJunctionResult(endJunction)
-
-    case GetLength =>
-      sender() ! GetLengthResult(length)
-
-    case Movement(from, to) =>
-      movementsInTurn :+= (sender(), from, to)
-
-    case ComputeTimeSlot(s) =>
+    case ComputeTimeSlot(_) =>
       log.info("Computing time slot")
-
       sender ! TimeSynchronizer.InfrastructureComputed
+
+//    case GetNthCar(n) =>
+//      sender() ! NthCar(cars.lift(n - 1))
+
+
+
+//    case AddCar(car, time, position) =>
+//      cars :+= car
+//      addedInTurn :+= (car, time, position)
+//      log.info(s"Add car ${ car.path }")
+//
+//    case RemoveCar(ref) =>
+//      cars = cars.filter(_ != ref)
+//
+//    case GetEndJunction =>
+//      sender() ! GetEndJunctionResult(endJunction)
+//
+//    case GetLength =>
+//      sender() ! GetLengthResult(length)
+//
+//    case Movement(from, to) =>
+//      movementsInTurn :+= (sender(), from, to)
 
 //      synchronization = s
 //

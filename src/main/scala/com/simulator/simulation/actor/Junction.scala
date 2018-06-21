@@ -34,7 +34,7 @@ object Junction {
 
 
 class Junction(val junctionId: JunctionId,
-               val greenLightInterval: Int = 10) extends Actor {
+               val greenLightInterval: Int = 1) extends Actor {
 
   val log = Logging(context.system, this)
 

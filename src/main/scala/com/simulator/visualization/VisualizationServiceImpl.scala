@@ -61,11 +61,19 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     gc.fillRect(0, 0, canvas.width.get, canvas.height.get)
 
     // roads
-    gc.stroke = Color.Black
     gc.lineWidth = roadLineWidth
     for (road <- snapshot.roads) {
-      val start = worldToScreen(junctionMap(road.start).position)
-      val end = worldToScreen(junctionMap(road.end).position)
+      val startJunction = junctionMap(road.start)
+      val endJunction = junctionMap(road.end)
+      val start = worldToScreen(startJunction.position)
+      val end = worldToScreen(endJunction.position)
+
+      gc.stroke =
+        if (endJunction.greenLightRoad.contains(road.id))
+          Color.Green
+        else
+          Color.Black
+
       gc.strokeLine(start.x, start.y, end.x, end.y)
     }
 
@@ -87,7 +95,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
       val pos = worldToScreen(getCarPosition(car))
-      val text = f"car #${car.id.value}\nspeed=${car.velocity}\nbreaking=${car.breaking}"
+      val text = f"car #${ car.id.value }\nspeed=${ car.velocity }\nbreaking=${ car.breaking }"
       gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
   }

@@ -35,8 +35,13 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
       .map { _.toSet }
       .distinct
       .map { _.toSeq.map(vectorToJunctionMap) }
+      .flatMap { case Seq(start, end) =>
+        Seq((start, end), (end, start))
+      }
       .zipWithIndex
-      .map { case (Seq(start, end), id) => RoadState(RoadId(id), start.id, end.id) }
+      .map { case ((start, end), id) =>
+        RoadState(RoadId(id), start.id, end.id),
+      }
   }
 
   private def generateCars(roads: IndexedSeq[RoadState], carCount: Int): Seq[CarState] = {
