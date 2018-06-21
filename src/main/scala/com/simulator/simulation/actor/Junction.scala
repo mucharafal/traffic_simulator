@@ -2,6 +2,7 @@ package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
+import com.simulator.common.JunctionId
 import com.simulator.simulation.actor.Junction.{InDirection, OutDirection}
 
 object JunctionTypes extends Enumeration {
@@ -11,13 +12,14 @@ object JunctionTypes extends Enumeration {
 
 object Junction {
 
-  def props(): Props = Props(new Junction())
+  def props(junctionId: JunctionId): Props = Props(new Junction(junctionId))
 
-  case object GetStatus
-  final case class GetStatusResult(synchronizer: Int,
-                                   inRoads: List[ActorRef],
-                                   outRoads: List[ActorRef],
-                                   informationPackage: Any = ()) // TODO: don't use Any
+  case object GetState
+  final case class GetStateResult(junctionId: JunctionId,
+                                  synchronizer: Int,
+                                  inRoads: List[ActorRef],
+                                  outRoads: List[ActorRef],
+                                  informationPackage: Any = ()) // TODO: don't use Any
 
   sealed trait Direction
   final object OutDirection extends Direction
@@ -27,7 +29,8 @@ object Junction {
 }
 
 
-class Junction(val greenLightTime: Int = 10) extends Actor {
+class Junction(val junctionId: JunctionId,
+               val greenLightTime: Int = 10) extends Actor {
 
   val log = Logging(context.system, this)
 
@@ -44,8 +47,8 @@ class Junction(val greenLightTime: Int = 10) extends Actor {
   }
 
   override def receive = {
-    case Junction.GetStatus =>
-      sender() ! Junction.GetStatusResult(synchronizer, inRoads, outRoads, (greenLightRoadRef, timeToChange))
+    case Junction.GetState =>
+      sender() ! Junction.GetStateResult(junctionId, synchronizer, inRoads, outRoads, (greenLightRoadRef, timeToChange))
     case TimeSynchronizer.ComputeTimeSlot(s) =>
       timeToChange match {
         case 0 =>

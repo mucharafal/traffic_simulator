@@ -16,10 +16,10 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
   private val carLabelOffset = -40
 
   override def visualize(snapshot: Snapshot): Unit = {
-    val junctionMap: Map[JunctionId, Junction] = snapshot.junctions.keyBy { _.id }
-    val roadMap: Map[RoadId, Road] = snapshot.roads.keyBy { _.id }
+    val junctionMap: Map[JunctionId, JunctionState] = snapshot.junctions.keyBy { _.id }
+    val roadMap: Map[RoadId, RoadState] = snapshot.roads.keyBy { _.id }
 
-    def getCarPosition(car: Car): Position = {
+    def getCarPosition(car: CarState): Position = {
       val road = roadMap(car.road)
       Position.interpolate(junctionMap(road.start).position, junctionMap(road.end).position)(car.positionOnRoad)
     }
@@ -92,7 +92,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     }
   }
 
-  private def calculateBoundingBox(junctions: Iterable[Junction]): Rect = {
+  private def calculateBoundingBox(junctions: Iterable[JunctionState]): Rect = {
     val xs = junctions.map { _.position.x }
     val ys = junctions.map { _.position.y }
     Rect.fromLTRB(

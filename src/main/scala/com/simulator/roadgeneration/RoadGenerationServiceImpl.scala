@@ -11,19 +11,19 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
   private val r = new Random()
 
   override def generate(junctionCount: Int, carCount: Int): Snapshot = {
-    val junctions: Seq[Junction] = generateJunctions(junctionCount)
-    val roads: Seq[Road] = generateRoads(junctions)
-    val cars: Seq[Car] = generateCars(roads.toIndexedSeq, carCount)
+    val junctions: Seq[JunctionState] = generateJunctions(junctionCount)
+    val roads: Seq[RoadState] = generateRoads(junctions)
+    val cars: Seq[CarState] = generateCars(roads.toIndexedSeq, carCount)
 
     Snapshot(junctions, roads, cars)
   }
 
-  private def generateJunctions(junctionCount: Int): Seq[Junction] = {
-    for (id <- 0 to junctionCount) yield Junction(JunctionId(id), Position(r.nextInt(1000), r.nextInt(500)))
+  private def generateJunctions(junctionCount: Int): Seq[JunctionState] = {
+    for (id <- 0 to junctionCount) yield JunctionState(JunctionId(id), Position(r.nextInt(1000), r.nextInt(500)))
   }
 
-  private def generateRoads(junctions: Seq[Junction]): Seq[Road] = {
-    val vectorToJunctionMap: Map[Vector2D, Junction] = junctions
+  private def generateRoads(junctions: Seq[JunctionState]): Seq[RoadState] = {
+    val vectorToJunctionMap: Map[Vector2D, JunctionState] = junctions
       .map { junction => positionToVector2d(junction.position) -> junction }
       .toMap
 
@@ -36,13 +36,13 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
       .distinct
       .map { _.toSeq.map(vectorToJunctionMap) }
       .zipWithIndex
-      .map { case (Seq(start, end), id) => Road(RoadId(id), start.id, end.id) }
+      .map { case (Seq(start, end), id) => RoadState(RoadId(id), start.id, end.id) }
   }
 
-  private def generateCars(roads: IndexedSeq[Road], carCount: Int): Seq[Car] = {
+  private def generateCars(roads: IndexedSeq[RoadState], carCount: Int): Seq[CarState] = {
     Seq.fill(carCount) { roads(r.nextInt(roads.size)) }
       .zipWithIndex
-      .map { case (road, id) => Car(CarId(id), road.id, r.nextFloat()) }
+      .map { case (road, id) => CarState(CarId(id), road.id, r.nextFloat()) }
   }
 
   private def positionToVector2d(p: Position): Vector2D = new Vector2D(p.x, p.y)

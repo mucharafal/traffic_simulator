@@ -5,7 +5,6 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.simulator.common._
-import com.simulator.simulation.actor.JunctionTypes
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -19,9 +18,9 @@ class SimulationServiceImpl(initialState: Snapshot)
   private var roads: Map[RoadId, ActorRef] = Map.empty
   private var cars: Map[CarId, ActorRef] = Map.empty
 
-  private def createJunctionActor(junction: Junction): ActorRef = {
+  private def createJunctionActor(junction: JunctionState): ActorRef = {
     val junctionActor = system.actorOf(
-      actor.Junction.props(),
+      actor.Junction.props(junction.id),
       f"junction-${ junction.id.value }")
 
     timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junctionActor)
@@ -29,7 +28,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     junctionActor
   }
 
-  private def createRoadActor(road: Road, reversed: Boolean): ActorRef = {
+  private def createRoadActor(road: RoadState, reversed: Boolean): ActorRef = {
     val endActors = (junctions(road.start), junctions(road.end))
 
     val (startActor, endActor) = if (reversed) endActors.swap else endActors
@@ -45,7 +44,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     roadActor
   }
 
-  private def createCarActor(car: Car): ActorRef = {
+  private def createCarActor(car: CarState): ActorRef = {
     val roadActor = roads(car.road)
 
     val carActor = system.actorOf(
@@ -88,23 +87,21 @@ class SimulationServiceImpl(initialState: Snapshot)
     implicit val timeout: Timeout = 1 second
 
     for {
-      junctions: Iterable[Junction] <- Future.traverse(junctions) {
-        case (id, junctionActor) =>
-          ask(junctionActor, actor.Junction.GetStatus)
-            .mapTo[actor.Junction.GetStatusResult]
-            .map { status => // TODO: use status
-              initialState.junctions.find { _.id == id }.get
-            }
+      junctions: Iterable[JunctionState] <- Future.traverse(junctions.values) { junctionActor =>
+        ask(junctionActor, actor.Junction.GetState)
+          .mapTo[actor.Junction.GetStateResult]
+          .map { status =>
+            initialState.junctions.find { _.id == status.junctionId }.get
+          }
       }
 
-      cars: Iterable[Car] <- Future.traverse(cars) {
-        case (id, carActor) =>
-          ask(carActor, actor.Car.GetStatus)
-            .mapTo[actor.Car.GetStatusResult]
-            .map { status =>
-              val roadId = roads.find { _._2 == status.roadRef }.get._1
-              Car(id, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat, status.breaking)
-            }
+      cars: Iterable[CarState] <- Future.traverse(cars.values) { carActor =>
+        ask(carActor, actor.Car.GetState)
+          .mapTo[actor.Car.GetStateResult]
+          .map { status =>
+            val roadId = roads.find { _._2 == status.roadRef }.get._1
+            CarState(status.carId, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat, status.breaking)
+          }
       }
     } yield {
       Snapshot(junctions.to[Seq], initialState.roads, cars.to[Seq])
