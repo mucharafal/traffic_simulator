@@ -10,16 +10,22 @@ import scala.util.Random
 class RoadGenerationServiceImpl extends RoadGenerationService {
   private val r = new Random()
 
-  override def generate(junctionCount: Int, carCount: Int): Snapshot = {
-    val junctions: Seq[JunctionState] = generateJunctions(junctionCount)
+  override def generate(wordSize: Int, junctionCount: Int, carCount: Int): Snapshot = {
+    val junctions: Seq[JunctionState] = generateJunctions(wordSize, junctionCount)
     val roads: Seq[RoadState] = generateRoads(junctions)
     val cars: Seq[CarState] = generateCars(roads.toIndexedSeq, carCount)
 
     Snapshot(junctions, roads, cars)
   }
 
-  private def generateJunctions(junctionCount: Int): Seq[JunctionState] = {
-    for (id <- 0 to junctionCount) yield JunctionState(JunctionId(id), Position(r.nextInt(1000), r.nextInt(500)))
+  private def generateJunctions(junctionCount: Int, wordSize: Int): Seq[JunctionState] = {
+    Stream.continually(Position(r.nextInt(wordSize), r.nextInt(wordSize)))
+      .distinct
+      .take(junctionCount)
+      .zipWithIndex
+      .map { case (position, id) =>
+        JunctionState(JunctionId(id), position)
+      }
   }
 
   private def generateRoads(junctions: Seq[JunctionState]): Seq[RoadState] = {
@@ -40,7 +46,7 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
       }
       .zipWithIndex
       .map { case ((start, end), id) =>
-        RoadState(RoadId(id), start.id, end.id),
+        RoadState(RoadId(id), start.id, end.id)
       }
   }
 

@@ -33,7 +33,7 @@ object App extends JFXApp {
 
   private val roadGenerationService: RoadGenerationService = new RoadGenerationServiceImpl
 
-  private val initialSnapshot = roadGenerationService.generate(20, 10)
+  private val initialSnapshot = roadGenerationService.generate(10, 20, 50)
 
   private val visualizationService: VisualizationService = new VisualizationServiceImpl(canvas)
 

@@ -18,8 +18,7 @@ object Car {
   final case class GetStateResult(carId: CarId,
                                   road: RoadRef,
                                   positionOnRoad: Double,
-                                  velocity: Double,
-                                  breaking: Boolean)
+                                  velocity: Double)
 
   case class EnteredRoad(position: Double, roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
 
@@ -46,7 +45,7 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
 
   def receive = {
     case Car.GetState =>
-      sender ! Car.GetStateResult(carId, road, position, position, false)
+      sender ! Car.GetStateResult(carId, road, position, position)
 
     case Car.EnteredRoad(position, roadLength, carAhead, nextJunction) =>
       this.road = sender
@@ -91,51 +90,5 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
         log.warning(position.toString)
         timeSynchronizer ! TimeSynchronizer.CarComputed
       }
-
-
-    //      if (!crashed) {
-    //        if (!started) {
-    //          val distance = velocity + acceleration / 2
-    //          val newPosition = position + distance
-    //          if (newPosition - currentRoadLength > 0) {
-    //            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
-    //            position = newPosition - currentRoadLength
-    //            roadToTurnOn ! AddCar(self, distance / position, position)
-    //            road ! RemoveCar(self)
-    //            road = roadToTurnOn
-    //            road ! GetLength
-    //            road ! GetEndJunction
-    //          } else {
-    //            road ! Movement(position, newPosition)
-    //            position = newPosition
-    //          }
-    //          velocity += acceleration / 2
-    //        } else {
-    //          //jakos wykryj, czy mozesz sie bezkolizyjnie wlaczyc
-    //        }
-    //      } else {
-    //        crashedCounter -= 1
-    //        if (crashedCounter == 0) {
-    //          road ! RemoveCar(self)
-    //          context stop self
-    //        }
-    //      }
-
-    //      position += 0.01
-    //
-    //      sender ! TimeSynchronizer.CarComputed
-    //
-    //
-    //    case Road.GetLengthResult(length) =>
-    //      assert(sender == road)
-    //      currentRoadLength = length
-    //
-    //    case Road.GetEndJunctionResult(endJunction) =>
-    //      assert(sender == road)
-    //      nextJunction = endJunction
-    //
-    //    case Car.Crash =>
-    //      crashed = true
-    //      velocity = 0
   }
 }

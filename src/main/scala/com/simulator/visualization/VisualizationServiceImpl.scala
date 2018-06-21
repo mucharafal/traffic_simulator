@@ -57,8 +57,8 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       val direction = (endPosition - startPosition).normalized
       val offset = direction.rotated90DegreesCW * (roadsDistance / 2.0)
 
-      (startPosition + offset + direction * (junctionOvalSize / 2.0),
-        endPosition + offset - direction * (junctionOvalSize / 2.0))
+      (startPosition + offset + direction * junctionOvalSize,
+        endPosition + offset - direction * junctionOvalSize)
     }
 
     def carPosition(car: CarState): Vec2D = {

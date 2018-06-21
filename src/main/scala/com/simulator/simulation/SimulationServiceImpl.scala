@@ -105,7 +105,7 @@ class SimulationServiceImpl(initialState: Snapshot)
           .mapTo[Car.GetStateResult]
           .map { status =>
             val roadId = roadActorToId(status.road)
-            CarState(status.carId, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat, status.breaking)
+            CarState(status.carId, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat)
           }
       }
     } yield {
