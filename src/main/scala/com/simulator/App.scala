@@ -1,5 +1,8 @@
 package com.simulator
 
+import java.util.concurrent.LinkedBlockingQueue
+
+import akka.NotUsed
 import akka.actor.ActorSystem
 import com.simulator.roadgeneration.{RoadGenerationService, RoadGenerationServiceImpl}
 import com.simulator.simulation.{SimulationService, SimulationServiceImpl}
@@ -12,7 +15,8 @@ import scalafx.scene.layout.HBox
 import scalafx.scene.paint.Color
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future, blocking}
+import scala.language.postfixOps
 
 object App extends JFXApp {
 
@@ -43,9 +47,20 @@ object App extends JFXApp {
   private val simulationService: SimulationService = new SimulationServiceImpl(initialSnapshot)
   Await.ready(simulationService.initialize(), 2 second)
 
+  val queue = new LinkedBlockingQueue[NotUsed](2)
   system.scheduler.schedule(initialDelay = 1 seconds, interval = 500 milli) {
-    val snapshot = Await.result(simulationService.simulateTimeSlot(), 400 milli)
-    visualizationService.visualize(snapshot)
+    queue.offer(NotUsed)
   }
 
+  Future {
+    while (true) {
+      blocking { queue.take() }
+      val snapshot = Await.result(simulationService.simulateTimeSlot(), 2 seconds)
+      visualizationService.visualize(snapshot)
+    }
+  }
+
+  override def stopApp(): Unit = {
+    system.terminate()
+  }
 }

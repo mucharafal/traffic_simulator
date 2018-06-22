@@ -49,12 +49,12 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
     case Car.GetState =>
       sender ! Car.GetStateResult(carId, road, position, position)
 
-    case Car.EnteredRoad(position, roadLength, carAhead, nextJunction) =>
-      this.road = sender
-      this.roadLength = roadLength
-      this.position = position
-      this.carAhead = carAhead
-      this.nextJunction = nextJunction
+    case Car.EnteredRoad(_position, _roadLength, _carAhead, _nextJunction) =>
+      road = sender
+      roadLength = _roadLength
+      position = _position
+      carAhead = _carAhead
+      nextJunction = _nextJunction
 
     case Car.GetRoadPosition =>
       sender ! Car.RoadPosition(road, position)
@@ -75,8 +75,7 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
         .getOrElse(Future.successful(None))
         .map {
           _.collect {
-            case Car.RoadPosition(road, position) if road == this.road && position <= roadLength =>
-              position
+            case Car.RoadPosition(_road, _position) if _road == road => _position
           }
         }
 
