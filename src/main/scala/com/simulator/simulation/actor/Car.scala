@@ -60,6 +60,9 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
       sender ! Car.RoadPosition(road, position)
 
     case TimeSynchronizer.ComputeTimeSlot =>
+      require(position <= roadLength)
+      require(position >= 0)
+
       log.info("Computing time slot")
       implicit val timeout: Timeout = 1 second
 
@@ -92,7 +95,8 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
 
           maybeCarAheadPosition match {
             case Some(carAheadPosition) =>
-              val allowedPosition = carAheadPosition - 0.5
+              val allowedPosition = math.max(0.0, carAheadPosition - 0.5)
+              require(allowedPosition <= roadLength)
               position = math.min(increasedPosition, allowedPosition)
 
             case None =>

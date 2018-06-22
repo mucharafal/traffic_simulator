@@ -20,7 +20,7 @@ import scala.language.postfixOps
 
 object App extends JFXApp {
 
-  private val canvas = new Canvas(100, 100)
+  private val canvas = new Canvas
 
   stage = new PrimaryStage {
     title = "Traffic Simulator"
@@ -48,7 +48,7 @@ object App extends JFXApp {
   Await.ready(simulationService.initialize(), 2 second)
 
   val queue = new LinkedBlockingQueue[NotUsed](2)
-  system.scheduler.schedule(initialDelay = 1 seconds, interval = 500 milli) {
+  system.scheduler.schedule(initialDelay = 1 seconds, interval = 50 milli) {
     queue.offer(NotUsed)
   }
 

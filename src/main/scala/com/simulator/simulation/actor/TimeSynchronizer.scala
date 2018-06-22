@@ -7,6 +7,7 @@ import akka.util.Timeout
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 object TimeSynchronizer {
   def props(): Props = Props(new TimeSynchronizer())
