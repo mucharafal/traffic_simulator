@@ -10,9 +10,12 @@ import com.simulator.simulation.actor._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 class SimulationServiceImpl(initialState: Snapshot)
                            (implicit system: ActorSystem, ec: ExecutionContext) extends SimulationService {
+
+  private implicit val timeout: Timeout = 1 second
 
   private var timeSynchronizer: TimeSynchronizerRef = _
   private var junctions: Map[JunctionId, JunctionRef] = Map.empty
@@ -73,16 +76,13 @@ class SimulationServiceImpl(initialState: Snapshot)
 
     timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props(), "timeSynchronizer")
 
-    (junctions.values ++ roadIdToActor.values ++ cars.map { _._2 }).foreach { entity =>
-      timeSynchronizer ! TimeSynchronizer.AddEntity(entity)
-    }
+    val entities = (junctions.values ++ roadIdToActor.values ++ cars.map { _._2 }).toSet
 
-    Future { Done }
+    (timeSynchronizer ? TimeSynchronizer.AddEntities(entities)).mapTo[TimeSynchronizer.EntitiesChanged.type]
+      .map { _ => Done }
   }
 
   override def simulateTimeSlot(): Future[Snapshot] = {
-    implicit val timeout: Timeout = 1 second
-
     for {
       _ <- ask(timeSynchronizer, TimeSynchronizer.ComputeTimeSlot).mapTo[TimeSynchronizer.TimeSlotComputed.type]
 

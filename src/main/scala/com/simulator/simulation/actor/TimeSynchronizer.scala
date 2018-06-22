@@ -13,8 +13,9 @@ import scala.language.postfixOps
 object TimeSynchronizer {
   def props(): Props = Props(new TimeSynchronizer)
 
-  case class AddEntity(entity: ActorRef)
-  case class RemoveEntity(entity: ActorRef)
+  case class AddEntities(entities: Set[ActorRef])
+  case class RemoveEntities(entities: Set[ActorRef])
+  case object EntitiesChanged
 
   case object ComputeTimeSlot
   case object TimeSlotComputed
@@ -43,11 +44,11 @@ class TimeSynchronizer extends Actor {
         .map { _ => TimeSynchronizer.TimeSlotComputed }
         .pipeTo(sender)
 
-    case TimeSynchronizer.AddEntity(entity) =>
-      entities += entity
+    case TimeSynchronizer.AddEntities(_entities) =>
+      entities ++= _entities
 
-    case TimeSynchronizer.RemoveEntity(entity) =>
-      entities -= entity
+    case TimeSynchronizer.RemoveEntities(_entities) =>
+      entities --= _entities
 
   }
 

@@ -35,20 +35,21 @@ object App extends JFXApp {
     }
   }
 
+  private val visualizationService: VisualizationService = new VisualizationServiceImpl(canvas)
+
   private val roadGenerationService: RoadGenerationService = new RoadGenerationServiceImpl
 
   private val initialSnapshot = roadGenerationService.generate(10, 20, 50)
-
-  private val visualizationService: VisualizationService = new VisualizationServiceImpl(canvas)
 
   private implicit val system: ActorSystem = ActorSystem()
   private implicit val ec: ExecutionContext = system.dispatcher
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   private val simulationService: SimulationService = new SimulationServiceImpl(initialSnapshot)
+
   Await.ready(simulationService.initialize(), 2 second)
 
-  Source.tick(initialDelay = 1 second, interval = 25 milli, NotUsed)
+  Source.tick(initialDelay = 0 second, interval = 25 milli, NotUsed)
     .mapAsync(parallelism = 1) { _ => simulationService.simulateTimeSlot() }
     .buffer(size = 1, OverflowStrategy.dropHead)
     .async
