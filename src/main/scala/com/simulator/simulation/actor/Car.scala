@@ -91,7 +91,7 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
           val hasGreenLight = junctionState.roadWithGreenLight.contains(road)
           val junctionOutRoads = junctionState.outRoads
 
-          val increasedPosition = position + 0.5
+          val increasedPosition = position + 0.25
 
           maybeCarAheadPosition match {
             case Some(carAheadPosition) =>
