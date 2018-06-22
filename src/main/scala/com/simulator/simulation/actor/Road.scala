@@ -11,19 +11,6 @@ object Road {
 
   case class EnterRoad(position: Double) // send by Car
   case object LeaveRoad // send by Car
-
-//  final case class GetNthCar(n: Int)
-//  final case class AddCar(car: ActorRef, time: Double, to: Double)
-//  final case class RemoveCar(car: ActorRef)
-//  final case class NthCar(car: Option[ActorRef])
-//  case object GetEndJunction
-//  case object GetLength
-//  final case class GetLengthResult(length: Double)
-//  final case class GetEndJunctionResult(endJunction: ActorRef)
-//  final case class Movement(from: Double, to: Double)
-
-  case object GetCarAheadOfMe
-  case class GetCarAheadOfMeResult(car: Option[CarRef])
 }
 
 class Road(val roadId: RoadId,
@@ -52,63 +39,8 @@ class Road(val roadId: RoadId,
     case LeaveRoad =>
       cars = cars.filter { _._1 != sender }
 
-    case ComputeTimeSlot(_) =>
+    case TimeSynchronizer.ComputeTimeSlot =>
       log.info("Computing time slot")
-      sender ! TimeSynchronizer.InfrastructureComputed
-
-//    case GetNthCar(n) =>
-//      sender() ! NthCar(cars.lift(n - 1))
-
-
-
-//    case AddCar(car, time, position) =>
-//      cars :+= car
-//      addedInTurn :+= (car, time, position)
-//      log.info(s"Add car ${ car.path }")
-//
-//    case RemoveCar(ref) =>
-//      cars = cars.filter(_ != ref)
-//
-//    case GetEndJunction =>
-//      sender() ! GetEndJunctionResult(endJunction)
-//
-//    case GetLength =>
-//      sender() ! GetLengthResult(length)
-//
-//    case Movement(from, to) =>
-//      movementsInTurn :+= (sender(), from, to)
-
-//      synchronization = s
-//
-//      addedInTurn = addedInTurn.sortBy(_._2)
-//      var maxPosition: Double = 0.0
-//      for (i <- 1 until movementsInTurn.size) {
-//        val carA = movementsInTurn(i - 1)
-//        val carB = movementsInTurn(i)
-//
-//        if (carA._3 > carB._3) {
-//          carA._1 ! Crash
-//          carB._1 ! Crash
-//        }
-//
-//        maxPosition = math.max(math.max(carA._3, carB._3), maxPosition)
-//      }
-//
-//      if (addedInTurn.nonEmpty) {
-//        val max: (ActorRef, Double, Double) = addedInTurn.filter(_ == maxPosition)(0) // TODO
-//        movementsInTurn :+= (max._1, 0.0, max._3)
-//      }
-//
-//      movementsInTurn = movementsInTurn.sortBy(_._2)
-//      for (i <- 1 until movementsInTurn.size) {
-//        val carA = movementsInTurn(i - 1)
-//        val carB = movementsInTurn(i)
-//
-//        if (carA._3 > carB._3) {
-//          carA._1 ! Crash
-//          carB._1 ! Crash
-//        }
-//      }
-
+      sender ! TimeSynchronizer.TimeSlotComputed
   }
 }

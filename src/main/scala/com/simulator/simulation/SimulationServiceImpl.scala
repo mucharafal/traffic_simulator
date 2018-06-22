@@ -21,13 +21,9 @@ class SimulationServiceImpl(initialState: Snapshot)
   private var cars: Seq[(CarId, CarRef)] = Seq.empty
 
   private def createJunctionActor(junctionState: JunctionState): JunctionRef = {
-    val junction = system.actorOf(
+    system.actorOf(
       actor.Junction.props(junctionState.id),
       f"junction-${ junctionState.id.value }")
-
-    timeSynchronizer ! actor.TimeSynchronizer.AddInfrastructure(junction)
-
-    junction
   }
 
   private def createRoadActor(road: RoadState): RoadRef = {
@@ -44,7 +40,6 @@ class SimulationServiceImpl(initialState: Snapshot)
 
     startActor ! Junction.AddRoad(roadActor, Junction.OutDirection)
     endActor ! Junction.AddRoad(roadActor, Junction.InDirection)
-    timeSynchronizer ! TimeSynchronizer.AddInfrastructure(roadActor)
 
     roadActor
   }
@@ -52,18 +47,12 @@ class SimulationServiceImpl(initialState: Snapshot)
   private def createCarActor(car: CarState): CarRef = {
     val roadActor = roadIdToActor(car.road)
 
-    val carActor = system.actorOf(
+    system.actorOf(
       actor.Car.props(car.id, roadActor, car.positionOnRoad),
       f"car-${ car.id.value }")
-
-    timeSynchronizer ! actor.TimeSynchronizer.AddCar(carActor)
-
-    carActor
   }
 
   override def initialize(): Future[Done] = {
-    timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props(), "timeSynchronizer")
-
     junctions = initialState.junctions
       .map { junction =>
         junction.id -> createJunctionActor(junction)
@@ -82,6 +71,12 @@ class SimulationServiceImpl(initialState: Snapshot)
         (car.id, createCarActor(car))
       }
 
+    timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props(), "timeSynchronizer")
+
+    (junctions.values ++ roadIdToActor.values ++ cars.map { _._2 }).foreach { entity =>
+      timeSynchronizer ! TimeSynchronizer.AddEntity(entity)
+    }
+
     Future { Done }
   }
 
@@ -89,11 +84,11 @@ class SimulationServiceImpl(initialState: Snapshot)
     implicit val timeout: Timeout = 1 second
 
     for {
-      _ <- ask(timeSynchronizer, TimeSynchronizer.NextTimeSlot).mapTo[TimeSynchronizer.TimeSlotComputed.type]
+      _ <- ask(timeSynchronizer, TimeSynchronizer.ComputeTimeSlot).mapTo[TimeSynchronizer.TimeSlotComputed.type]
 
       junctions: Iterable[JunctionState] <- Future.traverse(junctions.values) { junctionActor =>
         ask(junctionActor, actor.Junction.GetState)
-          .mapTo[actor.Junction.GetStateResult]
+          .mapTo[actor.Junction.State]
           .map { status =>
             val greenLightRoadId = status.roadWithGreenLight.map { roadActorToId(_) }
             initialState.junctions.find { _.id == status.junctionId }.get.copy(greenLightRoad = greenLightRoadId)

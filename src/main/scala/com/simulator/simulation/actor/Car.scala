@@ -2,12 +2,14 @@ package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.simulator.common.CarId
 import com.simulator.simulation.actor.Road.EnterRoad
+import scalaz.StreamT.Done
 
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
 object Car {
@@ -22,13 +24,13 @@ object Car {
 
   case class EnteredRoad(position: Double, roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
 
-  case object GetPosition
-  case class Position(road: RoadRef, positionOnRoad: Double)
+  case object GetRoadPosition
+  case class RoadPosition(road: RoadRef, position: Double)
 }
 
 class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends Actor {
 
-  implicit val ec = context.dispatcher
+  implicit val ec: ExecutionContext = context.dispatcher
   val log = Logging(context.system, this)
   val random = new Random
 
@@ -54,41 +56,63 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
       this.carAhead = carAhead
       this.nextJunction = nextJunction
 
-    case TimeSynchronizer.ComputeTimeSlot(_) =>
+    case Car.GetRoadPosition =>
+      sender ! Car.RoadPosition(road, position)
+
+    case TimeSynchronizer.ComputeTimeSlot =>
       log.info("Computing time slot")
-      implicit val timeout: Timeout = 500 milli
+      implicit val timeout: Timeout = 1 second
 
       val timeSynchronizer = sender
 
-      for {
-//        carAheadPosition <- carAhead match {
-//          case Some(car) => ask(car, Car.GetPosition).mapTo[Car.Position].map { Some(_) }
-//          case None => Future.successful(None)
-//        }
-        junctionState <- ask(nextJunction, Junction.GetState).mapTo[Junction.GetStateResult]
+      val futureJunctionState = (nextJunction ? Junction.GetState).mapTo[Junction.State]
 
-        increasedPosition = position + 0.5
-
-        (newRoad: RoadRef, newPosition: Double) =
-          if (increasedPosition < roadLength) {
-            (road, increasedPosition)
-          } else if(junctionState.roadWithGreenLight.contains(road)) {
-            val outRoads = junctionState.outRoads.toIndexedSeq
-            val newRoad = outRoads(random.nextInt(outRoads.size))
-            (newRoad, 0.0)
-          } else {
-            (road, roadLength)
-          }
-      } yield {
-        if (newRoad != road) {
-          road ! Road.LeaveRoad
-          newRoad ! Road.EnterRoad(position = 0.0)
-          position = 0.0
-        } else {
-          position = newPosition
+      val futureMaybeCarAheadPosition = carAhead
+        .map { car =>
+          (car ? Car.GetRoadPosition).mapTo[Car.RoadPosition]
+            .map { Some(_) }
         }
-        log.warning(position.toString)
-        timeSynchronizer ! TimeSynchronizer.CarComputed
-      }
+        .getOrElse(Future.successful(None))
+        .map {
+          _.collect {
+            case Car.RoadPosition(road, position) if road == this.road && position <= roadLength =>
+              position
+          }
+        }
+
+      val futureNextPositionComputed =
+        for {
+          junctionState <- futureJunctionState
+          maybeCarAheadPosition <- futureMaybeCarAheadPosition
+        } yield {
+
+          val hasGreenLight = junctionState.roadWithGreenLight.contains(road)
+          val junctionOutRoads = junctionState.outRoads
+
+          val increasedPosition = position + 0.5
+
+          maybeCarAheadPosition match {
+            case Some(carAheadPosition) =>
+              val allowedPosition = carAheadPosition - 0.5
+              position = math.min(increasedPosition, allowedPosition)
+
+            case None =>
+              if (increasedPosition >= roadLength && hasGreenLight) {
+                val nextRoad = junctionOutRoads(random.nextInt(junctionOutRoads.size))
+
+                position = roadLength
+                road ! Road.LeaveRoad
+                nextRoad ! Road.EnterRoad(position = 0.0)
+
+              } else {
+                position = math.min(increasedPosition, roadLength)
+              }
+          }
+
+          Done
+        }
+
+      futureNextPositionComputed.map { _ => TimeSynchronizer.TimeSlotComputed }
+        .pipeTo(timeSynchronizer)
   }
 }

@@ -2,80 +2,45 @@ package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
+import akka.pattern.{ask, pipe}
+import akka.util.Timeout
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 object TimeSynchronizer {
   def props(): Props = Props(new TimeSynchronizer())
 
-  final case class ComputeTimeSlot(n: Int) //computation in time slot ended
-  final case class AddCar(id: CarRef)
-  final case class RemoveCar(id: CarRef)
-  final case class AddInfrastructure(id: ActorRef)
-  final case class RemoveInfrastructure(id: ActorRef)
-  case object CarComputed
-  case object InfrastructureComputed
+  case class AddEntity(entity: ActorRef)
+  case class RemoveEntity(entity: ActorRef)
 
-  case object NextTimeSlot
+  case object ComputeTimeSlot
   case object TimeSlotComputed
 }
 
 class TimeSynchronizer extends Actor {
 
+  implicit val ec: ExecutionContext = context.dispatcher
   val log = Logging(context.system, this)
 
-  var cars: Set[CarRef] = Set.empty
-  var infrastructure: Set[ActorRef] = Set.empty // junctions and roads
-
-  var waitingCars: Set[CarRef] = Set.empty
-  var waitingInfrastructure: Set[ActorRef] = Set.empty
-
-  var timeSlot = 0
-
-  var nextTimeSlotSender: ActorRef = _
+  var entities = Set.empty[ActorRef]
 
   def receive = {
-    case TimeSynchronizer.NextTimeSlot =>
-      log.info("Next time slot")
-      require(waitingCars.isEmpty)
-      require(waitingInfrastructure.isEmpty)
+    case TimeSynchronizer.ComputeTimeSlot =>
+      log.info("Computing time slot")
 
-      nextTimeSlotSender = sender
-      waitingCars = cars
-      waitingCars.foreach { _ ! TimeSynchronizer.ComputeTimeSlot(timeSlot) }
+      implicit val timeout: Timeout = 1 second
 
-    case TimeSynchronizer.CarComputed =>
-      log.info(s"${sender.path} computed")
-      require(waitingCars.contains(sender))
-      require(waitingInfrastructure.isEmpty)
-      waitingCars -= sender
+      Future.traverse(entities.toSeq) { _ ? TimeSynchronizer.ComputeTimeSlot }
+        .map { _ => TimeSynchronizer.TimeSlotComputed }
+        .pipeTo(sender)
 
-      if (waitingCars.isEmpty) {
-        waitingInfrastructure = infrastructure
-        waitingInfrastructure.foreach { _ ! TimeSynchronizer.ComputeTimeSlot(timeSlot) }
-      }
+    case TimeSynchronizer.AddEntity(entity) =>
+      entities += entity
 
-    case TimeSynchronizer.InfrastructureComputed =>
-      log.info(s"${sender.path} computed")
-      require(waitingCars.isEmpty, sender.path)
-      require(waitingInfrastructure.contains(sender))
-      waitingInfrastructure -= sender
+    case TimeSynchronizer.RemoveEntity(entity) =>
+      entities -= entity
 
-      if (waitingInfrastructure.isEmpty) {
-        timeSlot += 1
-        nextTimeSlotSender ! TimeSynchronizer.TimeSlotComputed
-      }
-
-    case TimeSynchronizer.AddCar(car) =>
-      cars += car
-      log.info(s"Added car ${ car.path }")
-
-    case TimeSynchronizer.RemoveCar(car) =>
-      cars -= car
-
-    case TimeSynchronizer.AddInfrastructure(car) =>
-      infrastructure += car
-
-    case TimeSynchronizer.RemoveInfrastructure(car) =>
-      infrastructure -= car
   }
 
 }

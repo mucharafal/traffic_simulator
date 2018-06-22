@@ -13,7 +13,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
   private val canvasPadding = 50
   private val roadLineWidth = 4
   private val roadsDistance = 5
-  private val carOvalSize = 10
+  private val carOvalSize = 6
   private val junctionOvalSize = 12
   private val carLabelOffset = 10
 
@@ -119,7 +119,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
       val pos = carPosition(car.id)
-      val text = f"car #${ car.id.value }"
+      val text = f"#${ car.id.value }"
       gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
   }
