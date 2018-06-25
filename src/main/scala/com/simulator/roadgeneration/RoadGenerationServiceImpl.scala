@@ -53,7 +53,7 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
   private def generateCars(roads: IndexedSeq[RoadState], carCount: Int): Seq[CarState] = {
     Seq.fill(carCount) { roads(r.nextInt(roads.size)) }
       .zipWithIndex
-      .map { case (road, id) => CarState(CarId(id), road.id, r.nextFloat()) }
+      .map { case (road, id) => CarState(CarId(id), road.id, 0.0f) }
   }
 
   private def positionToVector2d(p: Position): Vector2D = new Vector2D(p.x, p.y)

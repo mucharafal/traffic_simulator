@@ -19,7 +19,7 @@ class Road(val roadId: RoadId,
 
   val log = Logging(context.system, this)
 
-  var cars = Seq.empty[(ActorRef, Double)]
+  var cars = List.empty[ActorRef]
 
   override def preStart() {
     log.info("Started")
@@ -28,13 +28,12 @@ class Road(val roadId: RoadId,
   override def receive = {
     case Road.EnterRoad(position) =>
       val car = sender
-      val carAhead = cars.headOption.map { _._1 }
-      cars :+= (car, position)
-      cars = cars.sortBy { _._2 }
+      val carAhead = cars.headOption
+      cars ::= car
       car ! Car.EnteredRoad(position, length, carAhead, endJunction)
 
     case Road.LeaveRoad =>
-      cars = cars.filter { _._1 != sender }
+      cars = cars.filter { _ != sender }
 
     case TimeSynchronizer.ComputeTimeSlot =>
       sender ! TimeSynchronizer.TimeSlotComputed

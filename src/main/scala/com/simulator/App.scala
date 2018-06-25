@@ -58,6 +58,7 @@ object App extends JFXApp {
     .runForeach { snapshot =>
       visualizationService.visualize(snapshot)
     }
+    .failed.foreach { _.printStackTrace() }
 
   override def stopApp(): Unit = {
     system.terminate()
