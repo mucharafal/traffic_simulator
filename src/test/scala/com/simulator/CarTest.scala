@@ -1,4 +1,4 @@
-/*
+
 package com.simulator
 
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
@@ -28,13 +28,14 @@ class CarTest(_system: ActorSystem) extends TestKit(_system)
     "return correct information about itself" in {
       val road = TestProbe()
       val car = system.actorOf(Car.props((road.ref, 0), (road.ref, 1), 0))
+      val mock = TestProbe()
 
-      road.send(car, CarGetInformationRequest)
-      road.expectMsg(100 millis, CarGetInformationResult(
+      mock.send(car, CarGetInformationRequest)
+      mock.expectMsg(100 millis, CarGetInformationResult(
         road.ref, 0, 0, false
       ))
     }
 
   }
 
-}*/
+}

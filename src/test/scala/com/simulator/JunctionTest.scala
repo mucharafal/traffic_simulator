@@ -1,4 +1,4 @@
-/*
+
 package com.simulator
 
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -183,4 +183,4 @@ class JunctionTest(_system: ActorSystem) extends TestKit(_system)
           (signalizationJunction, List.empty, List(mockRoad.ref), null, 10)))
     }
   }
-}*/
+}
