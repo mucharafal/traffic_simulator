@@ -27,6 +27,8 @@ class Car(currentPosition: PositionOnRoad,
           val driveAlgorithm: Any) extends Actor {
 
   import Car._
+  import Junction._
+
   var (roadId, position) = currentPosition
   val (destinationRoadId, destinationPosition) = destination
   //what to do in time slot
@@ -54,7 +56,7 @@ class Car(currentPosition: PositionOnRoad,
           val distance = velocity + acceleration / 2
           val newPosition = position + distance
           if (newPosition - currentRoadLength > 0) {
-            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
+            nextJunction ! Turning(roadId, roadToTurnOn)
             position = newPosition - currentRoadLength
             roadToTurnOn ! AddCar(self, distance / position, position)
             roadId ! RemoveCar(self)
