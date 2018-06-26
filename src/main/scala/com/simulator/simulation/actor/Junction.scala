@@ -2,7 +2,8 @@ package com.simulator.simulation.actor
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
-import com.simulator.simulation.actor.Junction.{Direction, InDirection, OutDirection}
+import com.simulator.simulation.actor.Car.Crash
+import com.simulator.simulation.actor.Junction._
 
 object JunctionTypes extends Enumeration {
   type JunctionTypes = Value
@@ -36,6 +37,7 @@ object Junction {
   final object InDirection extends Direction
 
   final case class AddRoad(id: ActorRef, direction: Direction)
+  final case class Turning(from: ActorRef, to: ActorRef)
 }
 
 abstract class Junction extends Actor {
@@ -43,6 +45,8 @@ abstract class Junction extends Actor {
 
   var inRoads: List[ActorRef] = List.empty
   var outRoads: List[ActorRef] = List.empty
+
+  var turnings: List[(ActorRef, ActorRef, ActorRef)] = List.empty  //who, from, to
 
   override def preStart() {
     log.info("Started")
@@ -58,6 +62,27 @@ abstract class Junction extends Actor {
         log.info(s"Added out road ${roadId.path}")
     }
   }
+  def checkCollisionInTurn = {
+    var source = Actor.noSender
+    var wasCollision = false
+    for((_,from, _) <- turnings){
+      val From = from
+      source match {
+        case Actor.noSender =>
+          source = from
+        case From =>
+        case _ => wasCollision = true
+      }
+    }
+    if(wasCollision)  turnings.foreach({case (car, _, _) => car ! Crash})
+    turnings = List.empty
+  }
+  def receive = {
+    case Turning(from, to) =>
+      turnings :+= (sender(), from, to)
+    case AddRoad(id, map) =>
+      addRoad(id, map)
+  }
 }
 
 class RightHandJunction() extends Junction {
@@ -68,14 +93,13 @@ class RightHandJunction() extends Junction {
 
   var synchronizer: Int = -1
 
-  def receive = {
+  override def receive = super.receive orElse {
     case GetStatus =>
       sender() ! GetStatusResult(synchronizer, rightHandJunction, inRoads, outRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
+      super.checkCollisionInTurn
       sender() ! InfrastructureComputed
-    case AddRoad(id, map) =>
-      super.addRoad(id, map)
   }
 }
 
@@ -92,14 +116,13 @@ class SignJunction() extends Junction {
   var synchronizer: Int = -1
   var privilegedRoads: (ActorRef, ActorRef) = (null, null)
 
-  def receive = {
+  override def receive = super.receive orElse {
     case GetStatus =>
       sender() ! GetStatusResult(synchronizer, signJunction, inRoads, outRoads, privilegedRoads)
     case ComputeTimeSlot(s) =>
       synchronizer = s
+      super.checkCollisionInTurn
       sender() ! InfrastructureComputed
-    case AddRoad(id, map) =>
-      super.addRoad(id, map)
     case PriviledgeRoad(ref) =>
       privilegedRoads = privilegedRoads match {
         case (null, null) =>
@@ -123,7 +146,7 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
   var synchronizer: Int = -1
   var roadIterator: Int = 0
 
-  def receive = {
+  override def receive = super.receive orElse {
     case GetStatus =>
       sender() ! GetStatusResult(synchronizer, signalizationJunction, inRoads, outRoads, (greenLightRoadRef, timeToChange))
     case ComputeTimeSlot(s) =>
@@ -138,9 +161,8 @@ class SignalizationJunction(val greenLightTime: Int = 10) extends Junction {
           timeToChange -= 1
       }
       synchronizer = s
+      super.checkCollisionInTurn
       sender() ! InfrastructureComputed
-    case AddRoad(id, map) =>
-      super.addRoad(id, map)
   }
 }
 

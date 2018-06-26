@@ -30,6 +30,7 @@ class Car(carId: CarId,
           val driveAlgorithm: Any) extends Actor {
 
   import Car._
+  import Junction.Turning
 
   val log = Logging(context.system, this)
 
@@ -63,7 +64,7 @@ class Car(carId: CarId,
           val distance = velocity + acceleration / 2
           val newPosition = position + distance
           if (newPosition - currentRoadLength > 0) {
-            //nextJunction ! Turning(roadId, roadToTurnOn) TODO
+            nextJunction ! Turning(roadId, roadToTurnOn)
             position = newPosition - currentRoadLength
             roadToTurnOn ! AddCar(self, distance / position, position)
             roadId ! RemoveCar(self)

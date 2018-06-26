@@ -22,9 +22,11 @@ class CarTest(_system: ActorSystem) extends TestKit(_system)
     "return correct information about itself" in {
       val road = TestProbe()
       val car = system.actorOf(Car.props(CarId(0), (road.ref, 0), (road.ref, 1), 0))
+      val mock = TestProbe()
 
-      road.send(car, GetStatus)
-      road.expectMsg(100 millis, GetStatusResult(
+
+      mock.send(car, GetStatus)
+      mock.expectMsg(100 millis, GetStatusResult(
         road.ref, 0, 0, false
       ))
     }
