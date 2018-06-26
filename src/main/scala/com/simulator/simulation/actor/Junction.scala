@@ -1,5 +1,6 @@
 package com.simulator.simulation.actor
 
+import akka.Done
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import com.simulator.common.JunctionId
@@ -7,10 +8,8 @@ import com.simulator.simulation.actor.Junction.{InDirection, OutDirection}
 
 object Junction {
 
-  def props(junctionId: JunctionId): Props = Props(new Junction(junctionId))
-
-  case class GetRoadLight(road: RoadRef)
-  case class RoadLight(road: RoadRef, greenLight: Boolean)
+  def props(junctionId: JunctionId, greenLightInterval: Int): Props =
+    Props(new Junction(junctionId, greenLightInterval))
 
   case object GetState
   final case class State(junctionId: JunctionId,
@@ -27,7 +26,7 @@ object Junction {
 }
 
 class Junction(val junctionId: JunctionId,
-               val greenLightInterval: Int = 5) extends Actor {
+               val greenLightInterval: Int) extends Actor {
 
   val log = Logging(context.system, this)
 
@@ -45,9 +44,6 @@ class Junction(val junctionId: JunctionId,
   override def receive = {
     case Junction.GetState =>
       sender ! Junction.State(junctionId, inRoads, outRoads, greenLightRoad, timeToChange)
-
-    case Junction.GetRoadLight(road) =>
-      sender ! Junction.RoadLight(road, greenLightRoad.contains(road))
 
     case TimeSynchronizer.ComputeTimeSlot =>
       log.info("Computing time slot")
@@ -77,6 +73,7 @@ class Junction(val junctionId: JunctionId,
           outRoads ::= road
           log.info(s"Added out road ${ road.path }")
       }
+      sender ! Done
   }
 }
 

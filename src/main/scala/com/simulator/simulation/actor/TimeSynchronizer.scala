@@ -1,10 +1,10 @@
 package com.simulator.simulation.actor
 
-import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,10 +46,11 @@ class TimeSynchronizer extends Actor {
 
     case TimeSynchronizer.AddEntities(_entities) =>
       entities ++= _entities
+      sender ! Done
 
     case TimeSynchronizer.RemoveEntities(_entities) =>
       entities --= _entities
-
+      sender ! Done
   }
 
 }

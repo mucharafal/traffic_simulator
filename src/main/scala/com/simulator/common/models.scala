@@ -12,8 +12,8 @@ case class RoadState(id: RoadId,
 
 case class CarState(id: CarId,
                     road: RoadId,
-                    positionOnRoad: Float,
-                    velocity: Float = 0.0f)
+                    positionOnRoad: Double,
+                    velocity: Double = 0.0f)
 
 case class Snapshot(junctions: Seq[JunctionState],
                     roads: Seq[RoadState],

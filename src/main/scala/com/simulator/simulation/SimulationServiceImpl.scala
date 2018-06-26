@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.simulator.common._
 import com.simulator.simulation.actor._
+import com.simulator.util.BiMap
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -18,14 +19,13 @@ class SimulationServiceImpl(initialState: Snapshot)
   private implicit val timeout: Timeout = 1 second
 
   private var timeSynchronizer: TimeSynchronizerRef = _
-  private var junctions: Map[JunctionId, JunctionRef] = Map.empty
-  private var roadIdToActor: Map[RoadId, RoadRef] = Map.empty
-  private var roadActorToId: Map[RoadRef, RoadId] = Map.empty
-  private var cars: Seq[(CarId, CarRef)] = Seq.empty
+  private var junctions: BiMap[JunctionId, JunctionRef] = BiMap.empty
+  private var roads: BiMap[RoadId, RoadRef] = BiMap.empty
+  private var cars: BiMap[CarId, CarRef] = BiMap.empty
 
   private def createJunctionActor(junctionState: JunctionState): JunctionRef = {
     system.actorOf(
-      actor.Junction.props(junctionState.id),
+      actor.Junction.props(junctionState.id, greenLightInterval = 5),
       f"junction-${ junctionState.id.value }")
   }
 
@@ -48,7 +48,7 @@ class SimulationServiceImpl(initialState: Snapshot)
   }
 
   private def createCarActor(car: CarState): CarRef = {
-    val roadActor = roadIdToActor(car.road)
+    val roadActor = roads(car.road)
 
     system.actorOf(
       actor.Car.props(car.id, roadActor, car.positionOnRoad),
@@ -57,29 +57,22 @@ class SimulationServiceImpl(initialState: Snapshot)
 
   override def initialize(): Future[Done] = {
     junctions = initialState.junctions
-      .map { junction =>
-        junction.id -> createJunctionActor(junction)
-      }
-      .toMap
+      .map { junction => junction.id -> createJunctionActor(junction) }
+      .toMap[JunctionId, JunctionRef]
 
-    val roads = initialState.roads
-      .map { road =>
-        road.id -> createRoadActor(road)
-      }
-    roadIdToActor = roads.toMap
-    roadActorToId = roads.map { _.swap }.toMap
+    roads = initialState.roads
+      .map { road => road.id -> createRoadActor(road) }
+      .toMap[RoadId, RoadRef]
 
     cars = initialState.cars
-      .map { car =>
-        (car.id, createCarActor(car))
-      }
+      .map { car => car.id -> createCarActor(car) }
+      .toMap[CarId, CarRef]
 
     timeSynchronizer = system.actorOf(actor.TimeSynchronizer.props(), "timeSynchronizer")
 
-    val entities = (junctions.values ++ roadIdToActor.values ++ cars.map { _._2 }).toSet
+    val entities = (junctions.values ++ roads.values ++ cars.values).toSet
 
-    (timeSynchronizer ? TimeSynchronizer.AddEntities(entities)).mapTo[TimeSynchronizer.EntitiesChanged.type]
-      .map { _ => Done }
+    (timeSynchronizer ? TimeSynchronizer.AddEntities(entities)).mapTo[Done]
   }
 
   override def simulateTimeSlot(): Future[Snapshot] = {
@@ -90,7 +83,7 @@ class SimulationServiceImpl(initialState: Snapshot)
         ask(junctionActor, actor.Junction.GetState)
           .mapTo[actor.Junction.State]
           .map { status =>
-            val greenLightRoadId = status.roadWithGreenLight.map { roadActorToId(_) }
+            val greenLightRoadId = status.roadWithGreenLight.map { roads.inverse(_) }
             initialState.junctions.find { _.id == status.junctionId }.get.copy(greenLightRoad = greenLightRoadId)
           }
       }
@@ -99,8 +92,8 @@ class SimulationServiceImpl(initialState: Snapshot)
         ask(car, Car.GetState)
           .mapTo[Car.GetStateResult]
           .map { status =>
-            val roadId = roadActorToId(status.road)
-            CarState(status.carId, roadId, status.positionOnRoad.toFloat, status.velocity.toFloat)
+            val roadId = roads.inverse(status.road)
+            CarState(status.carId, roadId, status.positionOnRoad, status.velocity)
           }
       }
     } yield {

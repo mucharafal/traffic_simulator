@@ -57,6 +57,5 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
   }
 
   private def positionToVector2d(p: Position): Vector2D = new Vector2D(p.x, p.y)
-  private def vector2dToPosition(v: Vector2D): Position = Position(v.x.toFloat, v.y.toFloat)
 
 }
