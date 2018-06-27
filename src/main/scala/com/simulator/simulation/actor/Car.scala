@@ -94,7 +94,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
           maybeCarAheadPosition <- futureMaybeCarAheadPosition
         } yield {
 
-          log.warning("Car ahead: {}", maybeCarAheadPosition)
+          log.info("Car ahead: {}", maybeCarAheadPosition)
 
           val hasGreenLight = junctionState.roadWithGreenLight.contains(road)
           val junctionOutRoads = junctionState.outRoads
