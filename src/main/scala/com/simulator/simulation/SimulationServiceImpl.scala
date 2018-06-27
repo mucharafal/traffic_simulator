@@ -51,7 +51,7 @@ class SimulationServiceImpl(initialState: Snapshot)
     val roadActor = roads(car.road)
 
     system.actorOf(
-      actor.Car.props(car.id, roadActor, car.positionOnRoad),
+      actor.Car.props(car.id, roadActor),
       f"car-${ car.id.value }")
   }
 

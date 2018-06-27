@@ -14,8 +14,8 @@ import scala.language.postfixOps
 import scala.util.Random
 
 object Car {
-  def props(carId: CarId, road: RoadRef, positionOnRoad: Double): Props =
-    Props(new Car(carId, road, positionOnRoad))
+  def props(carId: CarId, road: RoadRef): Props =
+    Props(new Car(carId, road))
 
   case object GetState
   final case class GetStateResult(carId: CarId,
@@ -23,13 +23,14 @@ object Car {
                                   positionOnRoad: Double,
                                   velocity: Double)
 
-  case class EnteredRoad(position: Double, roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
+  case class EnteredRoad(roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
+  case class CarAheadChanged(carAhead: Option[CarRef])
 
   case object GetRoadPosition
   case class RoadPosition(road: RoadRef, position: Double)
 }
 
-class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends Actor {
+class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
 
   implicit val ec: ExecutionContext = context.dispatcher
   val log = Logging(context.system, this)
@@ -43,19 +44,24 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
 
   override def preStart() {
     log.info("Started")
-    initialRoad ! EnterRoad(initialPosition)
+    initialRoad ! EnterRoad
   }
 
   def receive = {
     case Car.GetState =>
       sender ! Car.GetStateResult(carId, road, position, position)
 
-    case Car.EnteredRoad(_position, _roadLength, _carAhead, _nextJunction) =>
+    case Car.EnteredRoad(_roadLength, _carAhead, _nextJunction) =>
       road = sender
       roadLength = _roadLength
-      position = _position
+      position = 0.0
       carAhead = _carAhead
       nextJunction = _nextJunction
+
+    case Car.CarAheadChanged(_carAhead) =>
+      if (sender == road) {
+        carAhead = _carAhead
+      }
 
     case Car.GetRoadPosition =>
       sender ! Car.RoadPosition(road, position)
@@ -89,6 +95,8 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
           maybeCarAheadPosition <- futureMaybeCarAheadPosition
         } yield {
 
+          log.warning("Car ahead: {}", maybeCarAheadPosition)
+
           val hasGreenLight = junctionState.roadWithGreenLight.contains(road)
           val junctionOutRoads = junctionState.outRoads
 
@@ -106,7 +114,7 @@ class Car(carId: CarId, initialRoad: RoadRef, initialPosition: Double) extends A
 
                 position = roadLength
                 road ! Road.LeaveRoad
-                nextRoad ! Road.EnterRoad(position = 0.0)
+                nextRoad ! Road.EnterRoad
 
               } else {
                 position = math.min(increasedPosition, roadLength)
