@@ -2,6 +2,7 @@ package com.simulator.visualization
 
 import com.simulator.common._
 import com.simulator.util.CollectionExtensions._
+import javafx.geometry.Point2D
 import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.paint.Color
@@ -30,7 +31,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
         val worldW = boundingBox.w
         val worldH = boundingBox.h
 
-        val scale = Math.min(screenW / worldW, screenH / worldH)
+        val scale = math.min(screenW / worldW, screenH / worldH)
         new Scale(scale, scale)
       },
       // 1. Move center to point (0, 0)
@@ -41,14 +42,12 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       }
     ).reduce { _.createConcatenation(_) }
 
+    val worldToScreen: Vec2D => Vec2D =
+      Memo.immutableHashMapMemo { worldToScreenTransform.transform(_) }
+
     val junctions = snapshot.junctions.keyBy { _.id }
     val roads = snapshot.roads.keyBy { _.id }
     val cars = snapshot.cars.keyBy { _.id }
-
-    val worldToScreen: Vec2D => Vec2D = Memo.immutableHashMapMemo { pos =>
-      val point = worldToScreenTransform.transform(pos.x, pos.y)
-      Vec2D(point.getX, point.getY)
-    }
 
     val roadLength: RoadId => Double = Memo.immutableHashMapMemo { roadId =>
       val road = roads(roadId)
@@ -135,5 +134,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     )
   }
 
-  implicit def position2Vec2D(position: Position): Vec2D = Vec2D(position.x, position.y)
+  implicit def positionToVec2D(position: Position): Vec2D = Vec2D(position.x, position.y)
+  implicit def point2DToVec2D(p: Point2D): Vec2D = Vec2D(p.getX, p.getY)
+  implicit def vec2DToPoint2D(p: Vec2D): Point2D = new Point2D(p.x, p.y)
 }

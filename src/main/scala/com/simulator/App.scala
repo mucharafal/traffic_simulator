@@ -1,22 +1,24 @@
 package com.simulator
 
-import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.scaladsl.Source
+import akka.actor.{ActorSystem, Cancellable}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.{ActorMaterializer, Attributes, OverflowStrategy}
+import akka.{Done, NotUsed}
+import com.simulator.common.Snapshot
 import com.simulator.roadgeneration.{RoadGenerationService, RoadGenerationServiceImpl}
 import com.simulator.simulation.{SimulationService, SimulationServiceImpl}
 import com.simulator.visualization.{VisualizationService, VisualizationServiceImpl}
-import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
+import scalafx.application.{JFXApp, Platform}
 import scalafx.scene.Scene
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.layout.HBox
 import scalafx.scene.paint.Color
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.language.postfixOps
+import scala.util.Try
 
 object App extends JFXApp {
 
@@ -49,18 +51,43 @@ object App extends JFXApp {
 
   Await.ready(simulationService.initialize(), 2 second)
 
-  Source.tick(initialDelay = 0 second, interval = 25 milli, NotUsed)
+  val clock = Source.tick(initialDelay = 0 second, interval = 25 milli, NotUsed)
+
+  val simulation = Flow[NotUsed]
     .mapAsync(parallelism = 1) { _ => simulationService.simulateTimeSlot() }
+
+  val visualization = Flow[Snapshot]
+    .mapAsync(parallelism = 1) { snapshot =>
+      val promise = Promise[Unit]()
+      Platform.runLater {
+        promise.complete(Try {
+          visualizationService.visualize(snapshot)
+        })
+      }
+      promise.future
+    }
+
+  val (clockCancellable: Cancellable, result: Future[Done]) = clock
+    .via(simulation)
     .buffer(size = 1, OverflowStrategy.dropHead)
     .async
     .buffer(size = 1, OverflowStrategy.dropHead)
     .withAttributes(Attributes.inputBuffer(1, 1))
-    .runForeach { snapshot =>
-      visualizationService.visualize(snapshot)
-    }
-    .failed.foreach { _.printStackTrace() }
+    .via(visualization)
+    .toMat(Sink.ignore)(Keep.both)
+    .run()
+
+  result.failed.foreach { throwable =>
+    println("An error occurred. Aborting...")
+    throwable.printStackTrace()
+    sys.exit(1)
+  }
 
   override def stopApp(): Unit = {
+    println("Stopping simulation...")
+    clockCancellable.cancel()
+    Await.result(result, 5 seconds)
+    println("Stopped")
     system.terminate()
   }
 }

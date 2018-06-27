@@ -10,6 +10,7 @@ import scalaz.StreamT.Done
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 import scala.util.Random
 
 object Car {
