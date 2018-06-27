@@ -19,7 +19,7 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
   }
 
   private def generateJunctions(junctionCount: Int, wordSize: Int): Seq[JunctionState] = {
-    Stream.continually(Position(r.nextInt(wordSize), r.nextInt(wordSize)))
+    Stream.continually(Vec2D(r.nextInt(wordSize), r.nextInt(wordSize)))
       .distinct
       .take(junctionCount)
       .zipWithIndex
@@ -30,7 +30,7 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
 
   private def generateRoads(junctions: Seq[JunctionState]): Seq[RoadState] = {
     val vectorToJunctionMap: Map[Vector2D, JunctionState] = junctions
-      .map { junction => positionToVector2d(junction.position) -> junction }
+      .map { junction => vec2DToVector2D(junction.position) -> junction }
       .toMap
 
     val triangulator = new DelaunayTriangulator(vectorToJunctionMap.keys.toSeq.asJava)
@@ -56,6 +56,6 @@ class RoadGenerationServiceImpl extends RoadGenerationService {
       .map { case (road, id) => CarState(CarId(id), road.id, 0.0f) }
   }
 
-  private def positionToVector2d(p: Position): Vector2D = new Vector2D(p.x, p.y)
+  private def vec2DToVector2D(v: Vec2D): Vector2D = new Vector2D(v.x, v.y)
 
 }

@@ -135,7 +135,6 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
     )
   }
 
-  implicit def positionToVec2D(position: Position): Vec2D = Vec2D(position.x, position.y)
   implicit def point2DToVec2D(p: Point2D): Vec2D = Vec2D(p.getX, p.getY)
   implicit def vec2DToPoint2D(p: Vec2D): Point2D = new Point2D(p.x, p.y)
 }

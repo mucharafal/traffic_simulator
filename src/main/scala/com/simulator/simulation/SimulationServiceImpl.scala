@@ -34,9 +34,9 @@ class SimulationServiceImpl(initialState: Snapshot)
 
     val (startActor, endActor) = endActors
 
-    val length = Position.distance(
-      initialState.junctions.find { _.id == road.start }.get.position,
-      initialState.junctions.find { _.id == road.end }.get.position)
+    val startPosition = initialState.junctions.find { _.id == road.start }.get.position
+    val endPosition = initialState.junctions.find { _.id == road.end }.get.position
+    val length = (endPosition - startPosition).length
 
     val roadActor = system.actorOf(Road.props(road.id, startActor, endActor, length),
       f"road-${ road.id.value }")

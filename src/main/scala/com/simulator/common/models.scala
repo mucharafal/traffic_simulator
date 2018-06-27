@@ -3,7 +3,7 @@ package com.simulator.common
 import scala.collection.immutable.Seq
 
 case class JunctionState(id: JunctionId,
-                         position: Position,
+                         position: Vec2D,
                          greenLightRoad: Option[RoadId] = None)
 
 case class RoadState(id: RoadId,
