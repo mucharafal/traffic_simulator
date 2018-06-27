@@ -6,7 +6,7 @@ import javafx.geometry.Point2D
 import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.paint.Color
-import scalafx.scene.text.TextAlignment
+import scalafx.scene.text.{Font, TextAlignment}
 import scalaz.Memo
 
 class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService {
@@ -90,7 +90,7 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       val endJunction = junctions(road.end)
 
       gc.stroke = Color.Black
-      gc.strokeLine(startPosition.x, startPosition.y, midPosition.x, midPosition.y)
+      gc.strokeLine(startPosition.x, startPosition.y, endPosition.x, endPosition.y)
 
       gc.stroke =
         if (endJunction.greenLightRoad.contains(road.id))
@@ -114,11 +114,12 @@ class VisualizationServiceImpl(val canvas: Canvas) extends VisualizationService 
       gc.fillOval(pos.x - carOvalSize / 2, pos.y - carOvalSize / 2, carOvalSize, carOvalSize)
     }
 
-    gc.fill = Color.Red
+    gc.fill = Color.MediumBlue
+    gc.font = new Font(12.0)
     gc.textAlign = TextAlignment.Center
     for (car <- snapshot.cars) {
       val pos = carPosition(car.id)
-      val text = f"#${ car.id.value }"
+      val text = f"${ car.id.value }"
       gc.fillText(text, pos.x, pos.y - carLabelOffset)
     }
   }

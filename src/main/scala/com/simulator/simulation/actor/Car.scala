@@ -67,8 +67,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
       sender ! Car.RoadPosition(road, position)
 
     case TimeSynchronizer.ComputeTimeSlot =>
-      require(position <= roadLength)
-      require(position >= 0)
+      assert(0 <= position && position <= roadLength)
 
       log.info("Computing time slot")
       implicit val timeout: Timeout = 1 second
@@ -105,7 +104,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
           maybeCarAheadPosition match {
             case Some(carAheadPosition) =>
               val allowedPosition = math.max(0.0, carAheadPosition - 0.5)
-              require(allowedPosition <= roadLength)
+              assert(allowedPosition <= roadLength)
               position = math.min(increasedPosition, allowedPosition)
 
             case None =>
