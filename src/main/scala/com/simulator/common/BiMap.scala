@@ -1,4 +1,4 @@
-package com.simulator.util
+package com.simulator.common
 
 import scala.collection.generic.MapFactory
 import scala.collection.immutable

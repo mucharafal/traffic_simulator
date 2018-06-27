@@ -1,4 +1,4 @@
-package com.simulator.util
+package com.simulator.common
 
 object CollectionExtensions {
 

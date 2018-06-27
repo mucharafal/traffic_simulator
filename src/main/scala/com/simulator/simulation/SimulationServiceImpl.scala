@@ -4,9 +4,8 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
-import com.simulator.common._
+import com.simulator.common.{BiMap, _}
 import com.simulator.simulation.actor._
-import com.simulator.util.BiMap
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

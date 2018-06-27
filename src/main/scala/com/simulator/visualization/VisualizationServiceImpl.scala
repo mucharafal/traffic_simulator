@@ -1,7 +1,7 @@
 package com.simulator.visualization
 
 import com.simulator.common._
-import com.simulator.util.CollectionExtensions._
+import CollectionExtensions._
 import javafx.geometry.Point2D
 import javafx.scene.transform.{Scale, Translate}
 import scalafx.scene.canvas.Canvas
