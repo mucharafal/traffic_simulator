@@ -19,9 +19,9 @@ object Car {
     Props(new Car(carId, road))
 
   case object GetState
-  final case class GetStateResult(carId: CarId,
-                                  road: RoadRef,
-                                  positionOnRoad: Double)
+  final case class State(carId: CarId,
+                         road: RoadRef,
+                         positionOnRoad: Double)
 
   case class EnteredRoad(roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
   case class CarAheadChanged(carAhead: Option[CarRef])
@@ -49,7 +49,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
 
   def receive = {
     case Car.GetState =>
-      sender ! Car.GetStateResult(carId, road, position)
+      sender ! Car.State(carId, road, position)
 
     case Car.EnteredRoad(_roadLength, _carAhead, _nextJunction) =>
       road = sender

@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 import com.simulator.common.JunctionId
-import com.simulator.simulation.actor.Junction.{InDirection, OutDirection}
+import com.simulator.simulation.actor.Junction.Direction
 
 object Junction {
 
@@ -19,8 +19,10 @@ object Junction {
                          timeToChange: Double)
 
   sealed trait Direction
-  final object OutDirection extends Direction
-  final object InDirection extends Direction
+  object Direction {
+    final object Out extends Direction
+    final object In extends Direction
+  }
 
   final case class AddRoad(id: RoadRef, direction: Direction)
 }
@@ -66,10 +68,10 @@ class Junction(val junctionId: JunctionId,
 
     case Junction.AddRoad(road, direction) =>
       direction match {
-        case InDirection =>
+        case Direction.In =>
           inRoads ::= road
           log.info(s"Added in road ${ road.path }")
-        case OutDirection =>
+        case Direction.Out =>
           outRoads ::= road
           log.info(s"Added out road ${ road.path }")
       }

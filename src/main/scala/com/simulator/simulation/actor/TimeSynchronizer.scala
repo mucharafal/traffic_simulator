@@ -15,7 +15,6 @@ object TimeSynchronizer {
 
   case class AddEntities(entities: Set[ActorRef])
   case class RemoveEntities(entities: Set[ActorRef])
-  case object EntitiesChanged
 
   case object ComputeTimeSlot
   case object TimeSlotComputed

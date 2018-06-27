@@ -40,8 +40,8 @@ class SimulationServiceImpl(initialState: Snapshot)
     val roadActor = system.actorOf(Road.props(road.id, startActor, endActor, length),
       f"road-${ road.id.value }")
 
-    startActor ! Junction.AddRoad(roadActor, Junction.OutDirection)
-    endActor ! Junction.AddRoad(roadActor, Junction.InDirection)
+    startActor ! Junction.AddRoad(roadActor, Junction.Direction.Out)
+    endActor ! Junction.AddRoad(roadActor, Junction.Direction.In)
 
     roadActor
   }
@@ -89,7 +89,7 @@ class SimulationServiceImpl(initialState: Snapshot)
 
       cars: Iterable[CarState] <- Future.traverse(cars) { case (_, car) =>
         ask(car, Car.GetState)
-          .mapTo[Car.GetStateResult]
+          .mapTo[Car.State]
           .map { status =>
             val roadId = roads.inverse(status.road)
             CarState(status.carId, roadId, status.positionOnRoad)
