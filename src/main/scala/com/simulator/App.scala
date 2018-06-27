@@ -41,7 +41,7 @@ object App extends JFXApp {
 
   private val roadGenerationService: RoadGenerationService = new RoadGenerationServiceImpl
 
-  private val initialSnapshot = roadGenerationService.generate(10, 20, 50)
+  private val initialSnapshot = roadGenerationService.generate(Config.worldSize, Config.junctionCount, Config.carCount)
 
   private implicit val system: ActorSystem = ActorSystem()
   private implicit val ec: ExecutionContext = system.dispatcher
@@ -51,7 +51,7 @@ object App extends JFXApp {
 
   Await.ready(simulationService.initialize(), 2 second)
 
-  val clock = Source.tick(initialDelay = 0 second, interval = 25 milli, NotUsed)
+  val clock = Source.tick(initialDelay = 0 second, interval = Config.clockInterval, NotUsed)
 
   val simulation = Flow[NotUsed]
     .mapAsync(parallelism = 1) { _ => simulationService.simulateTimeSlot() }

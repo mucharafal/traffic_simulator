@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
+import com.simulator.Config
 import com.simulator.common.CarId
 import com.simulator.simulation.actor.Road.EnterRoad
 import scalaz.StreamT.Done
@@ -20,8 +21,7 @@ object Car {
   case object GetState
   final case class GetStateResult(carId: CarId,
                                   road: RoadRef,
-                                  positionOnRoad: Double,
-                                  velocity: Double)
+                                  positionOnRoad: Double)
 
   case class EnteredRoad(roadLength: Double, carAhead: Option[CarRef], endJunction: JunctionRef)
   case class CarAheadChanged(carAhead: Option[CarRef])
@@ -49,7 +49,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
 
   def receive = {
     case Car.GetState =>
-      sender ! Car.GetStateResult(carId, road, position, position)
+      sender ! Car.GetStateResult(carId, road, position)
 
     case Car.EnteredRoad(_roadLength, _carAhead, _nextJunction) =>
       road = sender
@@ -99,11 +99,11 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
           val hasGreenLight = junctionState.roadWithGreenLight.contains(road)
           val junctionOutRoads = junctionState.outRoads
 
-          val increasedPosition = position + 0.25
+          val increasedPosition = position + Config.carSpeed
 
           maybeCarAheadPosition match {
             case Some(carAheadPosition) =>
-              val allowedPosition = math.max(0.0, carAheadPosition - 0.5)
+              val allowedPosition = math.max(0.0, carAheadPosition - Config.carDistance)
               assert(allowedPosition <= roadLength)
               position = math.min(increasedPosition, allowedPosition)
 

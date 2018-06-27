@@ -92,7 +92,7 @@ class SimulationServiceImpl(initialState: Snapshot)
           .mapTo[Car.GetStateResult]
           .map { status =>
             val roadId = roads.inverse(status.road)
-            CarState(status.carId, roadId, status.positionOnRoad, status.velocity)
+            CarState(status.carId, roadId, status.positionOnRoad)
           }
       }
     } yield {
