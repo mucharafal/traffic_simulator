@@ -51,33 +51,35 @@ object App extends JFXApp {
 
   Await.ready(simulationService.initialize(), 2 second)
 
-  val clock = Source.tick(initialDelay = 0 second, interval = Config.clockInterval, NotUsed)
+  private val (clockCancellable: Cancellable, finished: Future[Done]) = {
+    val clock = Source.tick(initialDelay = 0 second, interval = Config.clockInterval, NotUsed)
 
-  val simulation = Flow[NotUsed]
-    .mapAsync(parallelism = 1) { _ => simulationService.simulateTimeSlot() }
+    val simulation = Flow[NotUsed]
+      .mapAsync(parallelism = 1) { _ => simulationService.simulateTimeSlot() }
 
-  val visualization = Flow[Snapshot]
-    .mapAsync(parallelism = 1) { snapshot =>
-      val promise = Promise[Unit]()
-      Platform.runLater {
-        promise.complete(Try {
-          visualizationService.visualize(snapshot)
-        })
+    val visualization = Flow[Snapshot]
+      .mapAsync(parallelism = 1) { snapshot =>
+        val promise = Promise[Unit]()
+        Platform.runLater {
+          promise.complete(Try {
+            visualizationService.visualize(snapshot)
+          })
+        }
+        promise.future
       }
-      promise.future
-    }
 
-  val (clockCancellable: Cancellable, result: Future[Done]) = clock
-    .via(simulation)
-    .buffer(size = 1, OverflowStrategy.dropHead)
-    .async
-    .buffer(size = 1, OverflowStrategy.dropHead)
-    .withAttributes(Attributes.inputBuffer(1, 1))
-    .via(visualization)
-    .toMat(Sink.ignore)(Keep.both)
-    .run()
+    clock
+      .via(simulation)
+      .buffer(size = 1, OverflowStrategy.dropHead)
+      .async
+      .buffer(size = 1, OverflowStrategy.dropHead)
+      .withAttributes(Attributes.inputBuffer(1, 1))
+      .via(visualization)
+      .toMat(Sink.ignore)(Keep.both)
+      .run()
+  }
 
-  result.failed.foreach { throwable =>
+  finished.failed.foreach { throwable =>
     println("An error occurred. Aborting...")
     throwable.printStackTrace()
     sys.exit(1)
@@ -86,7 +88,7 @@ object App extends JFXApp {
   override def stopApp(): Unit = {
     println("Stopping simulation...")
     clockCancellable.cancel()
-    Await.result(result, 5 seconds)
+    Await.result(finished, 5 seconds)
     println("Stopped")
     system.terminate()
   }
