@@ -1,6 +1,6 @@
 package com.simulator.simulation.actor
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, Props}
 import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
@@ -36,7 +36,7 @@ class Car(carId: CarId, initialRoad: RoadRef) extends Actor {
   val log = Logging(context.system, this)
   val random = new Random
 
-  var road: ActorRef = _
+  var road: RoadRef = _
   var roadLength: Double = _
   var position: Double = _
   var carAhead: Option[CarRef] = _

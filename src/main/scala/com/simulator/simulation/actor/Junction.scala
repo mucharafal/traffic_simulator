@@ -1,7 +1,7 @@
 package com.simulator.simulation.actor
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, Props}
 import akka.event.Logging
 import com.simulator.common.JunctionId
 import com.simulator.simulation.actor.Junction.{InDirection, OutDirection}
@@ -22,7 +22,7 @@ object Junction {
   final object OutDirection extends Direction
   final object InDirection extends Direction
 
-  final case class AddRoad(id: ActorRef, direction: Direction)
+  final case class AddRoad(id: RoadRef, direction: Direction)
 }
 
 class Junction(val junctionId: JunctionId,
@@ -30,12 +30,12 @@ class Junction(val junctionId: JunctionId,
 
   val log = Logging(context.system, this)
 
-  var inRoads: List[ActorRef] = List.empty
-  var outRoads: List[ActorRef] = List.empty
+  var inRoads: List[RoadRef] = List.empty
+  var outRoads: List[RoadRef] = List.empty
 
   var timeToChange: Int = greenLightInterval
-  var greenLightRoad: Option[ActorRef] = None
-  var greenLightRoadQueue: List[ActorRef] = List.empty
+  var greenLightRoad: Option[RoadRef] = None
+  var greenLightRoadQueue: List[RoadRef] = List.empty
 
   override def preStart() {
     log.info("Started")

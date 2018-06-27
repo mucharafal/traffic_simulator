@@ -1,6 +1,6 @@
 package com.simulator.simulation.actor
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, Props}
 import akka.event.Logging
 import com.simulator.common.RoadId
 
@@ -21,7 +21,7 @@ class Road(val roadId: RoadId,
 
   val log = Logging(context.system, this)
 
-  val cars = mutable.Queue.empty[ActorRef]
+  val cars = mutable.Queue.empty[CarRef]
 
   override def preStart() {
     log.info("Started")
