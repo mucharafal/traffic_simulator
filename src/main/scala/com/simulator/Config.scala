@@ -8,7 +8,7 @@ object Config {
   val junctionCount = 20
   val carCount = 50
 
-  val clockInterval = 25 milli
+  val clockInterval = 50 milli
 
   val carSpeed = 0.25
   val carDistance = 0.5
